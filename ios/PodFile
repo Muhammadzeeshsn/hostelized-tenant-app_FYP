@@ -1,7 +1,5 @@
-# ios/Podfile
 platform :ios, '14.0'
 
-# CocoaPods analytics sends network stats; disable for CI/local
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
@@ -27,7 +25,8 @@ require File.expand_path(File.join(flutter_root, 'packages', 'flutter_tools', 'b
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  # Using frameworks is required by several Flutter plugins.
+  use_frameworks! :linkage => :static
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
@@ -36,5 +35,10 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Ensure all pods use the same minimum iOS version
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+    end
   end
 end
