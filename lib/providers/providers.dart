@@ -1,11 +1,30 @@
+// lib/providers/providers.dart
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../api/tenant_api.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-final storageProvider = Provider((_) => const FlutterSecureStorage());
-final apiProvider = Provider((_) => TenantApi());
+import '../api/tenant_api.dart';
+import '../auth/auth_repo.dart';
 
-final authStateProvider = StateProvider<bool>((_) => false); // logged-in?
+// Storage
+final storageProvider = Provider<FlutterSecureStorage>(
+  (_) => const FlutterSecureStorage(),
+);
+
+// Single TenantApi instance
+final apiProvider = Provider<TenantApi>((_) => TenantApi());
+
+// Auth repo (uses secure storage + TenantApi)
+final authRepoProvider = Provider<AuthRepo>((ref) {
+  final storage = ref.watch(storageProvider);
+  final api = ref.watch(apiProvider);
+  return AuthRepo(storage, api);
+});
+
+// Basic logged-in flag if you still need it
+final authStateProvider = StateProvider<bool>((_) => false);
+
+// ---------------- Data providers ----------------
 
 final homeProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final api = ref.watch(apiProvider);

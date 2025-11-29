@@ -1,6 +1,7 @@
+// lib/screens/home/home_shell.dart
+
 import 'package:flutter/material.dart';
 
-// Use prefixes to avoid conflicts:
 import 'tabs/services_tab.dart' as services;
 import 'tabs/home_tab.dart' as home;
 import 'tabs/fees_tab.dart' as fees;
@@ -16,13 +17,13 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+  int _index = 1; // start from Home tab
 
   late final List<Widget> _pages = [
-    const services.ServicesTab(),
-    const home.HomeTab(),
-    const fees.FeesTab(),
-    const profile.ProfileTab(),
+    const services.ServicesTab(), // 0
+    const home.HomeTab(), // 1 (center)
+    const fees.FeesTab(), // 2
+    const profile.ProfileTab(), // 3
   ];
 
   @override

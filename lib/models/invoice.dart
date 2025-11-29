@@ -1,3 +1,5 @@
+// lib/models/invoice.dart
+
 class Invoice {
   final String id, period, status;
   final num amount;

@@ -1,3 +1,5 @@
+// lib/models/home.dart
+
 class TenantHome {
   final Map<String, dynamic>? tenant;
   final Map<String, dynamic>? room;

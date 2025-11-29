@@ -1,3 +1,5 @@
+// lib/screens/home/tabs/fees_tab.dart
+
 import 'package:flutter/widgets.dart';
 
 class FeesTab extends StatelessWidget {

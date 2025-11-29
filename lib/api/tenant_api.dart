@@ -1,23 +1,44 @@
+// lib/api/tenant_api.dart
+
 import 'dio_client.dart';
 
 class TenantApi {
   final _dio = DioClient.I.dio;
 
-  // Auth
-  Future<void> login(String email) async {
-    await _dio.post(
-      '/auth/login',
-      data: {'email': email, 'expectedRole': 'TENANT'},
-    );
-  }
+  // ===================== TENANT AUTH (USERNAME) =====================
 
-  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+  /// Send OTP to tenant by username.
+  Future<Map<String, dynamic>> loginByUsername(String username) async {
     final r = await _dio.post(
-      '/auth/verify-otp',
-      data: {'email': email, 'otp': otp},
+      '/auth/tenant/login-by-username',
+      data: {'username': username},
     );
     return Map<String, dynamic>.from(r.data as Map);
   }
+
+  /// Verify OTP for tenant username.
+  Future<Map<String, dynamic>> verifyTenantOtp(
+    String username,
+    String code,
+  ) async {
+    final r = await _dio.post(
+      '/auth/tenant/verify-otp',
+      data: {'username': username, 'code': code},
+    );
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  /// Lookup tenant username by email or phone.
+  Future<String> lookupTenantUsername(String emailOrPhone) async {
+    final r = await _dio.post(
+      '/auth/tenant/lookup-username',
+      data: {'emailOrPhone': emailOrPhone},
+    );
+    final map = Map<String, dynamic>.from(r.data as Map);
+    return map['username'] as String;
+  }
+
+  // ===================== TENANT PORTAL API (unchanged) =====================
 
   // Home
   Future<Map<String, dynamic>> getHome() async {
@@ -50,7 +71,6 @@ class TenantApi {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
-  // Placeholder checkout (backend already returns a URL string)
   Future<String> initiateCheckout(String invoiceId) async {
     final r = await _dio.post(
       '/tenant/payments/checkout',

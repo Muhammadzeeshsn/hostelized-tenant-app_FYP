@@ -1,3 +1,5 @@
+// lib/widgets/app_bottom_nav.dart
+
 import 'package:flutter/material.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -6,7 +8,7 @@ class AppBottomNav extends StatelessWidget {
 
   const AppBottomNav({super.key, required this.index, required this.onTap});
 
-  static const _bg = Color(0xFF003A60); // prototype deep blue
+  static const _bg = Color(0xFF003A60);
   static const _iconSize = 22.0;
 
   @override
@@ -23,27 +25,23 @@ class AppBottomNav extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // row of icons (leave a gap for center home)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _item(context, 0, Icons.dashboard_outlined, 'Dashboard'),
               _item(
                 context,
-                1,
+                0,
                 Icons.miscellaneous_services_outlined,
                 'Services',
               ),
-              const SizedBox(width: 64), // gap for center pill
-              _item(context, 3, Icons.receipt_long_outlined, 'Fees'),
-              _item(context, 4, Icons.person_outline, 'Profile'),
+              _item(context, 2, Icons.receipt_long_outlined, 'Fees'),
+              _item(context, 3, Icons.person_outline, 'Profile'),
             ],
           ),
-          // center rounded home button
           Positioned(
             top: -18,
             child: InkWell(
-              onTap: () => onTap(2),
+              onTap: () => onTap(1), // center = Home, index 1
               borderRadius: BorderRadius.circular(40),
               child: Container(
                 width: 76,

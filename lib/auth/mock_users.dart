@@ -1,3 +1,5 @@
+// lib/auth/mock_users.dart
+
 class MockUser {
   final String username;
   final String password;

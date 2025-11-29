@@ -1,8 +1,11 @@
+// lib/router.dart
+
 import 'package:go_router/go_router.dart';
 
 import 'screens/welcome/welcome_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/otp_screen.dart';
+import 'screens/auth/find_username_screen.dart';
 
 import 'screens/register/registration_form_screen.dart';
 import 'screens/register/docs_upload_screen.dart';
@@ -11,12 +14,6 @@ import 'screens/register/registration_success_screen.dart';
 
 import 'screens/home/home_shell.dart';
 
-/// Central app router
-///
-/// Notes:
-/// • We keep a single shell route at /dashboard so there’s only one bottom bar.
-/// • OTP route accepts an optional ?title=… query param.
-/// • Registration flow stays linear: form → docs → verify → success.
 final router = GoRouter(
   initialLocation: '/welcome',
   routes: [
@@ -24,11 +21,18 @@ final router = GoRouter(
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
     GoRoute(
       path: '/otp',
-      builder: (_, s) =>
-          OtpScreen(title: s.uri.queryParameters['title'] ?? 'Verify OTP'),
+      builder: (_, s) => OtpScreen(
+        title: s.uri.queryParameters['title'] ?? 'Login OTP',
+        username: s.uri.queryParameters['username'] ?? '',
+        contactMasked: s.uri.queryParameters['contactMasked'],
+      ),
+    ),
+    GoRoute(
+      path: '/find-username',
+      builder: (_, __) => const FindUsernameScreen(),
     ),
 
-    // Registration
+    // Registration flow (will be used after OTP if needed)
     GoRoute(
       path: '/register/form',
       builder: (_, __) => const RegistrationFormScreen(),
@@ -46,7 +50,6 @@ final router = GoRouter(
       builder: (_, __) => const RegistrationSuccessScreen(),
     ),
 
-    // Single shell route (keeps one persistent bottom bar)
     GoRoute(path: '/dashboard', builder: (_, __) => const HomeShell()),
   ],
 );
