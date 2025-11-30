@@ -21,18 +21,22 @@ final router = GoRouter(
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
     GoRoute(
       path: '/otp',
-      builder: (_, s) => OtpScreen(
-        title: s.uri.queryParameters['title'] ?? 'Login OTP',
-        username: s.uri.queryParameters['username'] ?? '',
-        contactMasked: s.uri.queryParameters['contactMasked'],
-      ),
+      builder: (_, state) {
+        final qp = state.uri.queryParameters;
+
+        return OtpScreen(
+          title: qp['title'] ?? 'Login OTP',
+          username: qp['username'] ?? '',
+          contactMasked: qp['contactMasked'] ?? '',
+        );
+      },
     ),
     GoRoute(
       path: '/find-username',
       builder: (_, __) => const FindUsernameScreen(),
     ),
 
-    // Registration flow (will be used after OTP if needed)
+    // Registration flow
     GoRoute(
       path: '/register/form',
       builder: (_, __) => const RegistrationFormScreen(),

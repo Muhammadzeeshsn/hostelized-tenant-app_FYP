@@ -32,44 +32,49 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleSendOtp() async {
-    final username = _username.text.trim();
-
-    if (username.isEmpty) {
-      setState(() => _err = 'Please enter your username.');
-      return;
-    }
+    final identifier = _username.text.trim();
 
     setState(() {
       _busy = true;
       _err = null;
     });
 
-    final result = await _repo.sendOtpForUsername(username);
+    debugPrint('[LoginScreen] _handleSendOtp identifier=$identifier');
 
-    if (!mounted) return;
-
-    if (result == null) {
+    if (identifier.isEmpty) {
       setState(() {
-        _err = 'Could not send OTP. Please check your username and try again.';
         _busy = false;
+        _err = 'Please enter your username.';
       });
       return;
     }
 
-    final contactMasked = result['contactMasked'] ?? '';
+    final ok = await _repo.sendOtpForUsername(identifier);
 
-    final encodedUsername = Uri.encodeComponent(username);
-    final encodedContact = Uri.encodeComponent(contactMasked);
+    if (!mounted) return;
 
-    context.go(
-      '/otp?title=Login%20OTP&username=$encodedUsername&contactMasked=$encodedContact',
-    );
+    if (ok) {
+      debugPrint('[LoginScreen] OTP send success, navigating to /otp');
 
-    setState(() => _busy = false);
+      context.go(
+        '/otp?title=${Uri.encodeComponent('Login OTP')}'
+        '&username=${Uri.encodeComponent(identifier)}',
+      );
+    } else {
+      debugPrint('[LoginScreen] OTP send failed');
+      setState(() {
+        _err = 'Could not send OTP. Please check your username and try again.';
+      });
+    }
+
+    if (mounted) {
+      setState(() => _busy = false);
+    }
   }
 
   void _openFindUsername() {
-    context.push('/find-username');
+    debugPrint('[LoginScreen] Navigating to /find-username');
+    context.go('/find-username');
   }
 
   @override
@@ -78,32 +83,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: kBrandBlue,
-        foregroundColor: Colors.white,
         title: const Text('Tenant Login'),
-        centerTitle: true,
+        foregroundColor: Colors.white,
+        backgroundColor: kBrandBlue,
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           children: [
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                'Sign in with your username',
-                style: t.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
+            const SizedBox(height: 16),
+            Text(
+              'Sign in with your username',
+              style: t.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'We will send a login code to your registered email.',
-                style: t.textTheme.bodyMedium?.copyWith(color: Colors.black54),
-                textAlign: TextAlign.center,
-              ),
+            const SizedBox(height: 4),
+            Text(
+              'We will send a login code to your registered email.',
+              style: t.textTheme.bodyMedium?.copyWith(color: Colors.black54),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -127,8 +125,8 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: _busy ? null : _handleSendOtp,
               child: _busy
                   ? const SizedBox(
-                      width: 22,
                       height: 22,
+                      width: 22,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Text('Send OTP'),

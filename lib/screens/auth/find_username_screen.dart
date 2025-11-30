@@ -16,9 +16,9 @@ class FindUsernameScreen extends StatefulWidget {
 }
 
 class _FindUsernameScreenState extends State<FindUsernameScreen> {
-  final _contact = TextEditingController();
+  final _contactCtrl = TextEditingController();
   bool _busy = false;
-  String? _err;
+  String? _error;
   String? _foundUsername;
 
   late final AuthRepo _repo = AuthRepo(
@@ -28,39 +28,82 @@ class _FindUsernameScreenState extends State<FindUsernameScreen> {
 
   @override
   void dispose() {
-    _contact.dispose();
+    _contactCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _handleSearch() async {
-    final contact = _contact.text.trim();
+    final contact = _contactCtrl.text.trim();
+    debugPrint('[FindUsernameScreen] _handleSearch contact=$contact');
+
     if (contact.isEmpty) {
-      setState(() => _err = 'Please enter your registered email or phone.');
-      return;
-    }
-
-    setState(() {
-      _busy = true;
-      _err = null;
-      _foundUsername = null;
-    });
-
-    final username = await _repo.lookupUsername(contact);
-
-    if (!mounted) return;
-
-    if (username == null) {
       setState(() {
-        _err = 'Failed to lookup username. Please try again.';
-        _busy = false;
+        _error = 'Please enter your registered email or phone number.';
+        _foundUsername = null;
       });
       return;
     }
 
     setState(() {
-      _foundUsername = username;
-      _busy = false;
+      _busy = true;
+      _error = null;
+      _foundUsername = null;
     });
+
+    try {
+      final username = await _repo.lookupUsername(contact);
+      if (!mounted) return;
+
+      if (username == null || username.isEmpty) {
+        debugPrint(
+          '[FindUsernameScreen] lookup returned null/empty username for contact=$contact',
+        );
+        setState(() {
+          _error = 'No username found for this contact.';
+        });
+        return;
+      }
+
+      debugPrint(
+        '[FindUsernameScreen] lookup OK contact=$contact username=$username',
+      );
+
+      setState(() {
+        _foundUsername = username;
+      });
+
+      // optional dialog to highlight the username
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Your username'),
+          content: Text(
+            'We found this username associated with your contact:\n\n$username',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('[FindUsernameScreen] ERROR: $e\n$st');
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to lookup username. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  void _handleBack() {
+    debugPrint('[FindUsernameScreen] back pressed -> /login');
+    context.go('/login'); // avoids "There is nothing to pop"
   }
 
   @override
@@ -69,13 +112,12 @@ class _FindUsernameScreenState extends State<FindUsernameScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: kBrandBlue,
-        foregroundColor: Colors.white,
         title: const Text('Find your username'),
-        centerTitle: true,
+        foregroundColor: Colors.white,
+        backgroundColor: kBrandBlue,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: _handleBack,
         ),
       ),
       body: SafeArea(
@@ -90,14 +132,14 @@ class _FindUsernameScreenState extends State<FindUsernameScreen> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: _contact,
+                controller: _contactCtrl,
                 decoration: const InputDecoration(labelText: 'Email or phone'),
               ),
-              if (_err != null) ...[
-                const SizedBox(height: 8),
-                Text(_err!, style: TextStyle(color: t.colorScheme.error)),
-              ],
               const SizedBox(height: 16),
+              if (_error != null) ...[
+                Text(_error!, style: TextStyle(color: t.colorScheme.error)),
+                const SizedBox(height: 8),
+              ],
               FilledButton(
                 onPressed: _busy ? null : _handleSearch,
                 child: _busy
@@ -108,15 +150,15 @@ class _FindUsernameScreenState extends State<FindUsernameScreen> {
                       )
                     : const Text('Search'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               if (_foundUsername != null) ...[
-                Text('Your username:', style: t.textTheme.titleMedium),
+                Text('Found username:', style: t.textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
                   _foundUsername!,
-                  style: t.textTheme.headlineSmall?.copyWith(
+                  style: t.textTheme.titleLarge?.copyWith(
                     color: kBrandBlue,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],

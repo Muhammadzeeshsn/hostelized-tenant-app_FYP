@@ -11,13 +11,13 @@ import '../../theme.dart';
 class OtpScreen extends StatefulWidget {
   final String title;
   final String username;
-  final String? contactMasked;
+  final String contactMasked; // currently we only show generic text
 
   const OtpScreen({
     super.key,
     required this.title,
     required this.username,
-    this.contactMasked,
+    this.contactMasked = '',
   });
 
   @override
@@ -41,51 +41,65 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _handleVerify() async {
-    final username = widget.username.trim();
-
-    if (username.isEmpty) {
-      setState(() => _err = 'Missing context. Please go back and login again.');
-      return;
-    }
-
+    final identifier = widget.username.trim();
     final code = _otp.text.trim();
-    if (code.isEmpty) {
-      setState(() => _err = 'Please enter the OTP sent to you.');
-      return;
-    }
 
     setState(() {
       _busy = true;
       _err = null;
     });
 
-    final ok = await _repo.verifyTenantOtp(username, code);
+    debugPrint('[OtpScreen] _handleVerify identifier=$identifier otp=<hidden>');
+
+    if (identifier.isEmpty) {
+      setState(() {
+        _busy = false;
+        _err = 'Missing context. Please go back and login again.';
+      });
+      return;
+    }
+
+    if (code.isEmpty) {
+      setState(() {
+        _busy = false;
+        _err = 'Please enter the OTP sent to you.';
+      });
+      return;
+    }
+
+    final ok = await _repo.verifyTenantOtp(identifier, code);
 
     if (!mounted) return;
 
     if (ok) {
+      debugPrint('[OtpScreen] OTP verify success, navigating to /dashboard');
       context.go('/dashboard');
     } else {
-      setState(() => _err = 'Invalid or expired OTP. Please try again.');
+      debugPrint('[OtpScreen] OTP verify failed');
+      setState(() {
+        _err = 'Invalid or expired OTP. Please try again.';
+      });
     }
 
-    setState(() => _busy = false);
+    if (mounted) {
+      setState(() => _busy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final masked = widget.contactMasked;
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: kBrandBlue,
-        foregroundColor: Colors.white,
         title: Text(widget.title),
-        centerTitle: true,
+        backgroundColor: kBrandBlue,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            debugPrint('[OtpScreen] back pressed, popping route');
+            context.pop();
+          },
         ),
       ),
       body: SafeArea(
@@ -98,16 +112,6 @@ class _OtpScreenState extends State<OtpScreen> {
                 'Enter the 6-digit code sent to your registered contact.',
                 style: t.textTheme.titleMedium,
               ),
-              if (masked != null && masked.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  masked,
-                  style: t.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: kBrandBlue,
-                  ),
-                ),
-              ],
               const SizedBox(height: 24),
               TextField(
                 controller: _otp,

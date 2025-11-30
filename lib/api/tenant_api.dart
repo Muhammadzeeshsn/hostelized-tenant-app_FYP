@@ -1,46 +1,57 @@
 // lib/api/tenant_api.dart
 
+import 'package:flutter/foundation.dart';
 import 'dio_client.dart';
 
 class TenantApi {
   final _dio = DioClient.I.dio;
 
-  // ===================== TENANT AUTH (USERNAME) =====================
+  // ---------------------------------------------------------------------------
+  // Auth (Tenant username/email/phone -> OTP)
+  // ---------------------------------------------------------------------------
 
-  /// Send OTP to tenant by username.
-  Future<Map<String, dynamic>> loginByUsername(String username) async {
+  Future<void> loginByUsername(String identifier) async {
+    debugPrint('TenantApi.loginByUsername identifier=$identifier');
     final r = await _dio.post(
-      '/auth/tenant/login-by-username',
-      data: {'username': username},
+      '/auth/tenant/login-username',
+      data: {'identifier': identifier},
     );
-    return Map<String, dynamic>.from(r.data as Map);
+    debugPrint(
+      'TenantApi.loginByUsername response status=${r.statusCode} data=${r.data}',
+    );
   }
 
-  /// Verify OTP for tenant username.
   Future<Map<String, dynamic>> verifyTenantOtp(
-    String username,
-    String code,
+    String identifier,
+    String otp,
   ) async {
+    debugPrint('TenantApi.verifyTenantOtp identifier=$identifier otp=<hidden>');
     final r = await _dio.post(
       '/auth/tenant/verify-otp',
-      data: {'username': username, 'code': code},
+      data: {'identifier': identifier, 'otp': otp},
+    );
+    debugPrint(
+      'TenantApi.verifyTenantOtp response status=${r.statusCode} data=${r.data}',
     );
     return Map<String, dynamic>.from(r.data as Map);
   }
 
-  /// Lookup tenant username by email or phone.
-  Future<String> lookupTenantUsername(String emailOrPhone) async {
+  Future<Map<String, dynamic>> lookupTenantUsername(String emailOrPhone) async {
+    debugPrint('TenantApi.lookupTenantUsername emailOrPhone=$emailOrPhone');
     final r = await _dio.post(
-      '/auth/tenant/lookup-username',
+      '/auth/lookup-username',
       data: {'emailOrPhone': emailOrPhone},
     );
-    final map = Map<String, dynamic>.from(r.data as Map);
-    return map['username'] as String;
+    debugPrint(
+      'TenantApi.lookupTenantUsername response status=${r.statusCode} data=${r.data}',
+    );
+    return Map<String, dynamic>.from(r.data as Map);
   }
 
-  // ===================== TENANT PORTAL API (unchanged) =====================
-
+  // ---------------------------------------------------------------------------
   // Home
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, dynamic>> getHome() async {
     final r = await _dio.get(
       '/tenant/home',
@@ -49,7 +60,10 @@ class TenantApi {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  // ---------------------------------------------------------------------------
   // Invoices
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, dynamic>> listInvoices({
     String? status,
     int page = 1,
@@ -71,6 +85,7 @@ class TenantApi {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  // Placeholder checkout (backend already returns a URL string)
   Future<String> initiateCheckout(String invoiceId) async {
     final r = await _dio.post(
       '/tenant/payments/checkout',
@@ -79,7 +94,10 @@ class TenantApi {
     return (r.data as Map)['checkoutUrl'] as String;
   }
 
-  // Receipts
+  // ---------------------------------------------------------------------------
+  // Payments / receipts
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, dynamic>> listPayments({
     int page = 1,
     int pageSize = 20,
@@ -91,7 +109,10 @@ class TenantApi {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  // ---------------------------------------------------------------------------
   // Tickets
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, dynamic>> createTicket({
     required String subject,
     required String message,
@@ -119,7 +140,10 @@ class TenantApi {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  // ---------------------------------------------------------------------------
   // Notices
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, dynamic>> listNotices({
     int page = 1,
     int pageSize = 20,
@@ -135,7 +159,10 @@ class TenantApi {
     await _dio.patch('/tenant/notices/$id/read');
   }
 
+  // ---------------------------------------------------------------------------
   // Room / Hostel / Profile
+  // ---------------------------------------------------------------------------
+
   Future<Map<String, dynamic>?> getRoom() async {
     final r = await _dio.get('/tenant/room');
     if (r.data == null) return null;

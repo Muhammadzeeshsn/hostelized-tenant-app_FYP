@@ -1,20 +1,28 @@
+// lib/screens/invoices/invoices_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../providers/providers.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../../providers/providers.dart';
 
 class InvoicesScreen extends ConsumerWidget {
   const InvoicesScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final invoices = ref.watch(invoicesProvider(null));
+    final invoicesAsync = ref.watch(invoicesProvider(null));
+
     return Scaffold(
       appBar: AppBar(title: const Text('Invoices')),
-      body: invoices.when(
+      body: invoicesAsync.when(
         data: (d) {
           final items = (d['items'] as List?) ?? [];
-          if (items.isEmpty)
+
+          if (items.isEmpty) {
             return const Center(child: Text('No invoices yet.'));
+          }
+
           return ListView.separated(
             itemCount: items.length,
             separatorBuilder: (_, __) => const Divider(height: 1),
