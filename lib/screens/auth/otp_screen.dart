@@ -44,14 +44,19 @@ class _OtpScreenState extends State<OtpScreen> {
     final identifier = widget.username.trim();
     final code = _otp.text.trim();
 
+    debugPrint(
+      '[OtpScreen] _handleVerify username=$identifier otp=${code.isEmpty ? "<empty>" : "<entered>"}',
+    );
+
     setState(() {
       _busy = true;
       _err = null;
     });
 
-    debugPrint('[OtpScreen] _handleVerify identifier=$identifier otp=<hidden>');
-
     if (identifier.isEmpty) {
+      debugPrint(
+        '[OtpScreen] missing username context, asking user to go back',
+      );
       setState(() {
         _busy = false;
         _err = 'Missing context. Please go back and login again.';
@@ -60,6 +65,7 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     if (code.isEmpty) {
+      debugPrint('[OtpScreen] empty otp field');
       setState(() {
         _busy = false;
         _err = 'Please enter the OTP sent to you.';
@@ -67,13 +73,18 @@ class _OtpScreenState extends State<OtpScreen> {
       return;
     }
 
+    // 🔑 THIS STILL USES verifyTenantOtp (no compile error)
     final ok = await _repo.verifyTenantOtp(identifier, code);
+    debugPrint('[OtpScreen] verifyTenantOtp() result ok=$ok');
 
     if (!mounted) return;
 
     if (ok) {
-      debugPrint('[OtpScreen] OTP verify success, navigating to /dashboard');
-      context.go('/dashboard');
+      // ✅ CHANGE: go to registration flow instead of dashboard
+      debugPrint(
+        '[OtpScreen] OTP verify success, navigating to /register/form',
+      );
+      context.go('/register/form');
     } else {
       debugPrint('[OtpScreen] OTP verify failed');
       setState(() {
