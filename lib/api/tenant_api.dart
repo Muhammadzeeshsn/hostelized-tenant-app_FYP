@@ -1,4 +1,5 @@
-// lib/api/tenant_api.dart
+// lib/api/tenant_api.dart (Updated methods)
+
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
@@ -6,123 +7,240 @@ import '../models/tenant_registration_draft.dart';
 import 'dio_client.dart';
 
 class TenantApi {
-  final _dio = DioClient.I.dio;
+  final DioClient _client = DioClient.I;
 
   // ===========================================================================
-  // AUTHENTICATION (Username Only)
+  // AUTHENTICATION - USE PUBLIC DIO
   // ===========================================================================
 
-  /// Send OTP to username only - no email/phone support
-  Future<void> loginByUsername(String username) async {
-    debugPrint('[AUTH] loginByUsername: $username');
+  /// Send OTP to username / email / phone
+  Future<void> loginByUsername(String identifier) async {
+    debugPrint('[AUTH] loginByUsername: $identifier');
 
     try {
-      final r = await _dio.post(
+      // Use publicDio for auth endpoints
+      final r = await _client.publicDio.post(
         '/auth/tenant/login-username',
-        data: {'username': username}, // Backend expects 'username' field
+        data: {'identifier': identifier},
       );
-      debugPrint('[AUTH] OTP Sent. Status: ${r.statusCode}');
 
-      if (r.statusCode != 200 && r.statusCode != 204) {
-        throw Exception('Failed to send OTP: ${r.data}');
+      debugPrint(
+        '[AUTH] loginByUsername status: ${r.statusCode}, data: ${r.data}',
+      );
+
+      if (r.statusCode == 200 || r.statusCode == 201 || r.statusCode == 204) {
+        return;
       }
+
+      throw Exception('Login failed: ${r.statusCode}');
     } on DioException catch (e) {
-      debugPrint('[AUTH] OTP Send Error: ${e.message}');
-      throw Exception(_parseAuthError(e));
+      debugPrint('[AUTH] loginByUsername DioError: ${e.type} - ${e.message}');
+
+      if (e.response != null) {
+        final status = e.response?.statusCode;
+        final data = e.response?.data;
+
+        String msg = 'Login failed';
+        if (data is Map) {
+          msg = data['message'] ?? data['error'] ?? msg;
+        }
+
+        if (status == 401 || status == 404) {
+          throw Exception('Username not found. Please check and try again.');
+        }
+        if (status == 400) {
+          throw Exception('Invalid username. Please check and try again.');
+        }
+        if (status == 500) {
+          throw Exception('Server error. Please try again later.');
+        }
+
+        throw Exception(msg);
+      }
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Request timed out. Please check your connection.');
+      }
+      if (e.type == DioExceptionType.connectionError) {
+        throw Exception(
+            'Network error. Please check your internet connection.');
+      }
+
+      throw Exception('Network error: ${e.message}');
     }
   }
 
-  /// Verify OTP for username - returns token on success
+  /// Verify tenant OTP
   Future<Map<String, dynamic>> verifyTenantOtp(
-    String username,
+    String identifier,
     String otp,
   ) async {
-    debugPrint('[AUTH] verifyTenantOtp for: $username');
+    debugPrint('[AUTH] verifyTenantOtp for: $identifier');
 
     try {
-      final r = await _dio.post(
+      // Use publicDio for auth endpoints
+      final r = await _client.publicDio.post(
         '/auth/tenant/verify-otp',
-        data: {
-          'username': username, // Backend expects 'username' field
-          'otp': otp,
-        },
+        data: {'identifier': identifier, 'otp': otp},
       );
 
-      debugPrint('[AUTH] OTP Verify Response: ${r.statusCode}');
+      debugPrint(
+        '[AUTH] verifyTenantOtp status: ${r.statusCode}, data: ${r.data}',
+      );
 
-      if (r.statusCode == 200) {
-        final data = Map<String, dynamic>.from(r.data as Map);
-        // Expected: { "success": true, "token": "abc123" }
-        if (data['success'] != true) {
-          throw Exception(data['message'] ?? 'Invalid OTP');
-        }
-        return data;
+      if (r.statusCode == 200 || r.statusCode == 201) {
+        return Map<String, dynamic>.from(r.data as Map);
       }
 
       throw Exception('OTP verification failed: ${r.statusCode}');
     } on DioException catch (e) {
-      debugPrint('[AUTH] OTP Verify Error: ${e.message}');
-      throw Exception(_parseAuthError(e));
+      debugPrint('[AUTH] verifyTenantOtp DioError: ${e.type} - ${e.message}');
+
+      if (e.response != null) {
+        final status = e.response?.statusCode;
+        final data = e.response?.data;
+
+        String msg = 'OTP verification failed';
+        if (data is Map) {
+          msg = data['message'] ?? data['error'] ?? msg;
+        }
+
+        if (status == 400 || status == 401) {
+          throw Exception('Invalid OTP');
+        }
+        if (status == 404) {
+          throw Exception('Username not found. Please check and try again.');
+        }
+        if (status == 500) {
+          throw Exception('Server error. Please try again later.');
+        }
+
+        throw Exception(msg);
+      }
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('OTP verification timed out. Please try again.');
+      }
+      if (e.type == DioExceptionType.connectionError) {
+        throw Exception(
+            'Network error. Please check your internet connection.');
+      }
+
+      throw Exception('Network error: ${e.message}');
     }
   }
 
-  /// Lookup username by email or phone (for forgot username)
+  /// Lookup username by email or phone
   Future<Map<String, dynamic>> lookupTenantUsername(String contact) async {
     debugPrint('[AUTH] lookupUsername for contact: $contact');
 
     try {
-      final r = await _dio.post(
+      // Use publicDio for auth endpoints
+      final r = await _client.publicDio.post(
         '/auth/lookup-username',
-        data: {'contact': contact}, // Backend handles email/phone lookup
+        data: {'emailOrPhone': contact},
       );
 
-      if (r.statusCode == 200) {
+      debugPrint(
+        '[AUTH] lookupUsername status: ${r.statusCode}, data: ${r.data}',
+      );
+
+      if (r.statusCode == 200 || r.statusCode == 201) {
         return Map<String, dynamic>.from(r.data as Map);
-        // Expected: { "username": "user123", "success": true }
       }
 
       throw Exception('Lookup failed: ${r.statusCode}');
     } on DioException catch (e) {
-      debugPrint('[AUTH] Lookup Error: ${e.message}');
-      throw Exception(_parseAuthError(e));
-    }
-  }
+      debugPrint('[AUTH] Lookup DioError: ${e.type} - ${e.message}');
 
-  // ===========================================================================
-  // HELPER METHODS
-  // ===========================================================================
+      if (e.response != null) {
+        final status = e.response?.statusCode;
+        final data = e.response?.data;
 
-  /// Parse Dio errors to user-friendly messages
-  String _parseAuthError(DioException e) {
-    if (e.response?.data != null) {
-      try {
-        final data = e.response!.data as Map;
-        return data['message'] ?? 'Authentication failed';
-      } catch (_) {
-        return 'Server error: ${e.response?.statusCode}';
+        String msg = 'Lookup failed';
+        if (data is Map) {
+          msg = data['message'] ?? data['error'] ?? msg;
+        }
+
+        if (status == 404) {
+          throw Exception('No username found for this contact');
+        }
+        if (status == 400) {
+          throw Exception('Email or phone is required');
+        }
+        if (status == 401) {
+          // This shouldn't happen with publicDio, but just in case
+          throw Exception('Please try again');
+        }
+
+        throw Exception(msg);
       }
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Request timed out. Please check your connection.');
+      }
+      if (e.type == DioExceptionType.connectionError) {
+        throw Exception('Network error. Please check your connection.');
+      }
+
+      throw Exception('Network error: ${e.message}');
     }
-    return 'Network error. Please check your connection.';
   }
 
   // ===========================================================================
-  // EXISTING METHODS (UNCHANGED)
+  // PROFILE COMPLETION CHECK
+  // ===========================================================================
+
+  /// Check if user has complete profile
+  Future<bool> hasCompleteProfile() async {
+    try {
+      // Use authenticated dio
+      final r = await _client.dio.get('/tenant/profile');
+      final data = Map<String, dynamic>.from(r.data as Map);
+
+      // Check for required profile fields
+      final requiredFields = ['firstName', 'lastName', 'phone', 'address'];
+      bool hasAllFields = requiredFields.every((field) {
+        final value = data[field];
+        return value != null && value.toString().trim().isNotEmpty;
+      });
+
+      // Check if profile photo exists
+      final hasProfilePhoto =
+          data['avatarUrl'] != null && (data['avatarUrl'] as String).isNotEmpty;
+
+      return hasAllFields && hasProfilePhoto;
+    } catch (e) {
+      debugPrint('[AUTH] Profile check failed: $e');
+      return false;
+    }
+  }
+
+  // ===========================================================================
+  // HOME & DASHBOARD - USE AUTHENTICATED DIO
   // ===========================================================================
 
   Future<Map<String, dynamic>> getHome() async {
-    final r = await _dio.get(
+    final r = await _client.dio.get(
       '/tenant/home',
       queryParameters: {'includeNotices': '1'},
     );
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  // ===========================================================================
+  // INVOICES & PAYMENTS
+  // ===========================================================================
+
   Future<Map<String, dynamic>> listInvoices({
     String? status,
     int page = 1,
     int pageSize = 20,
   }) async {
-    final r = await _dio.get(
+    final r = await _client.dio.get(
       '/tenant/invoices',
       queryParameters: {
         if (status != null) 'status': status,
@@ -133,8 +251,13 @@ class TenantApi {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  Future<Map<String, dynamic>> getInvoice(String id) async {
+    final r = await _client.dio.get('/tenant/invoices/$id');
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
   Future<String> initiateCheckout(String invoiceId) async {
-    final r = await _dio.post(
+    final r = await _client.dio.post(
       '/tenant/payments/checkout',
       data: {'invoiceId': invoiceId, 'method': 'ONLINE'},
     );
@@ -145,19 +268,23 @@ class TenantApi {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final r = await _dio.get(
+    final r = await _client.dio.get(
       '/tenant/payments',
       queryParameters: {'page': page, 'pageSize': pageSize},
     );
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  // ===========================================================================
+  // TICKETS & SUPPORT
+  // ===========================================================================
+
   Future<Map<String, dynamic>> createTicket({
     required String subject,
     required String message,
     String? category,
   }) async {
-    final r = await _dio.post(
+    final r = await _client.dio.post(
       '/tenant/tickets',
       data: {
         'subject': subject,
@@ -172,18 +299,22 @@ class TenantApi {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final r = await _dio.get(
+    final r = await _client.dio.get(
       '/tenant/tickets',
       queryParameters: {'page': page, 'pageSize': pageSize},
     );
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  // ===========================================================================
+  // NOTICES & ANNOUNCEMENTS
+  // ===========================================================================
+
   Future<Map<String, dynamic>> listNotices({
     int page = 1,
     int pageSize = 20,
   }) async {
-    final r = await _dio.get(
+    final r = await _client.dio.get(
       '/tenant/notices',
       queryParameters: {'page': page, 'pageSize': pageSize},
     );
@@ -191,23 +322,27 @@ class TenantApi {
   }
 
   Future<void> markNoticeRead(String id) async {
-    await _dio.patch('/tenant/notices/$id/read');
+    await _client.dio.patch('/tenant/notices/$id/read');
   }
 
+  // ===========================================================================
+  // PROFILE & HOSTEL INFO
+  // ===========================================================================
+
   Future<Map<String, dynamic>?> getRoom() async {
-    final r = await _dio.get('/tenant/room');
+    final r = await _client.dio.get('/tenant/room');
     if (r.data == null) return null;
     return Map<String, dynamic>.from(r.data as Map);
   }
 
   Future<Map<String, dynamic>?> getHostel() async {
-    final r = await _dio.get('/tenant/hostel');
+    final r = await _client.dio.get('/tenant/hostel');
     if (r.data == null) return null;
     return Map<String, dynamic>.from(r.data as Map);
   }
 
   Future<Map<String, dynamic>> getProfile() async {
-    final r = await _dio.get('/tenant/profile');
+    final r = await _client.dio.get('/tenant/profile');
     return Map<String, dynamic>.from(r.data as Map);
   }
 
@@ -215,7 +350,7 @@ class TenantApi {
     String? phone,
     String? avatarUrl,
   }) async {
-    final r = await _dio.patch(
+    final r = await _client.dio.patch(
       '/tenant/profile',
       data: {'phone': phone, 'avatarUrl': avatarUrl},
     );
@@ -226,19 +361,18 @@ class TenantApi {
   // REGISTRATION
   // ===========================================================================
 
-  /// Submit complete tenant registration with file uploads
   Future<bool> submitTenantRegistration(TenantRegistrationDraft draft) async {
     debugPrint('[REGISTRATION] submitTenantRegistration for: ${draft.email}');
 
     try {
       final formData = await _draftToFormData(draft);
-      final r = await _dio.post(
+      final r = await _client.dio.post(
         '/tenant/register',
         data: formData,
         options: Options(contentType: 'multipart/form-data'),
       );
 
-      debugPrint('[REGISTRATION] Response: ${r.statusCode}');
+      debugPrint('[REGISTRATION] Response: ${r.statusCode} - ${r.data}');
       return r.statusCode == 201 || r.statusCode == 200;
     } catch (e) {
       debugPrint('[REGISTRATION] Error: $e');
@@ -246,11 +380,9 @@ class TenantApi {
     }
   }
 
-  /// Convert draft to multipart form data
   Future<FormData> _draftToFormData(TenantRegistrationDraft draft) async {
     final formData = FormData();
 
-    // Add text fields
     final fields = {
       'firstName': draft.firstName ?? '',
       'lastName': draft.lastName ?? '',
@@ -281,7 +413,6 @@ class TenantApi {
       formData.fields.add(MapEntry(key, value));
     });
 
-    // Add file fields
     Future<void> addFile(String fieldName, String? path) async {
       if (path != null && File(path).existsSync()) {
         formData.files.add(

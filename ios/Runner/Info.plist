@@ -45,12 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-
 	<key>NSCameraUsageDescription</key>
-	<string>Camera is used to verify your identity.</string>
+	<string>Camera is used to verify your identity and capture documents.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need photo library access to select your profile image.</string>
-
-
 </dict>
 </plist>

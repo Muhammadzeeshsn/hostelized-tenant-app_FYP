@@ -1,4 +1,4 @@
-// lib/router.dart
+// lib/router.dart (Updated)
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,12 +9,6 @@ import 'screens/auth/otp_screen.dart';
 import 'screens/auth/find_username_screen.dart';
 import 'screens/home/home_shell.dart';
 import 'screens/onboarding/tenant_registration_flow.dart';
-
-// Legacy screens (remove if not needed)
-import 'screens/register/registration_form_screen.dart';
-import 'screens/register/docs_upload_screen.dart';
-import 'screens/register/verify_identity_screen.dart';
-import 'screens/register/registration_success_screen.dart';
 
 /// Main router configuration
 final router = GoRouter(
@@ -54,26 +48,9 @@ final router = GoRouter(
       builder: (_, __) => const HomeShell(),
     ),
 
-    // Legacy routes (remove these if no longer used)
-    GoRoute(
-      path: AppRoutes.registerForm,
-      builder: (_, __) => const RegistrationFormScreen(),
-    ),
-    GoRoute(
-      path: AppRoutes.registerDocs,
-      builder: (_, __) => const DocsUploadScreen(),
-    ),
-    GoRoute(
-      path: AppRoutes.registerVerify,
-      builder: (_, __) => const VerifyIdentityScreen(),
-    ),
-    GoRoute(
-      path: AppRoutes.registerSuccess,
-      builder: (_, __) => const RegistrationSuccessScreen(),
-    ),
+    // NOTE: Legacy registration routes have been removed
+    // They are replaced by TenantRegistrationFlow
   ],
-
-  // Comprehensive error handling for unknown routes
   errorBuilder: (context, state) {
     return Scaffold(
       appBar: AppBar(
@@ -88,14 +65,14 @@ final router = GoRouter(
             children: [
               Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
               const SizedBox(height: 24),
-              Text(
+              const Text(
                 'Page Not Found',
-                style: Theme.of(context).textTheme.headlineSmall,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
                 'The route "${state.uri}" does not exist.',
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: const TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),

@@ -1,4 +1,5 @@
-// lib/screens/auth/otp_screen.dart
+// lib/screens/auth/otp_screen.dart (Updated navigation)
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -27,8 +28,10 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final _otp = TextEditingController();
   bool _busy = false;
+  bool _resendBusy = false;
   String? _error;
   bool _showSuccess = false;
+  int _resendCountdown = 0;
 
   late final AuthRepo _repo = AuthRepo(
     const FlutterSecureStorage(),
@@ -42,64 +45,146 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _handleVerify() async {
+    if (_busy) {
+      debugPrint('[OTP][UI] Already busy, ignoring verify');
+      return;
+    }
+
     final username = widget.username.trim();
     final code = _otp.text.trim();
 
-    debugPrint(
-        '[OTP] Verifying $username with code: ${code.isEmpty ? "<empty>" : "<hidden>"}');
+    debugPrint('[OTP][UI] Verifying $username with code: <hidden>');
+
+    if (code.length != 6) {
+      setState(() {
+        _error = 'Please enter a valid 6-digit OTP';
+      });
+      return;
+    }
 
     setState(() {
       _busy = true;
       _error = null;
     });
 
-    // Validate OTP format
-    if (code.length != 6) {
-      setState(() {
-        _busy = false;
-        _error = 'Please enter a valid 6-digit OTP';
-      });
-      return;
-    }
-
     try {
-      final response = await _repo.verifyTenantOtp(username, code);
-      debugPrint('[OTP] Verify response: $response');
+      final response = await _repo.verifyTenantOtp(username, code).timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception(
+                'OTP verification timed out. Please try again.'),
+          );
+
+      debugPrint('[OTP][UI] Verify response: $response');
 
       if (!mounted) return;
 
       if (response['success'] == true) {
-        // Store auth token
-        final token = response['token'] as String?;
-        if (token != null) {
-          await _repo.storeAuthToken(token);
-          await _repo.storeUsername(username);
-        }
-
-        // Show success and navigate
         setState(() {
           _showSuccess = true;
         });
 
-        await Future.delayed(const Duration(seconds: 1));
+        // Check if profile is complete
+        await Future.delayed(const Duration(milliseconds: 500));
 
         if (!mounted) return;
-        context.go(AppRoutes.onboardingTenant, extra: username);
+
+        final hasCompleteProfile = await _repo.hasCompleteProfile();
+
+        if (hasCompleteProfile) {
+          // Profile is complete, go to dashboard
+          await _repo.setRegistrationComplete(true);
+          context.go(AppRoutes.dashboard);
+        } else {
+          // Profile is incomplete, go to registration flow
+          await _repo.setRegistrationComplete(false);
+          context.go(AppRoutes.onboardingTenant, extra: username);
+        }
       } else {
-        // Handle backend validation failure
         final message = response['message'] as String? ?? 'Invalid OTP';
         setState(() {
           _error = message;
         });
       }
     } catch (e) {
-      debugPrint('[OTP] Error: $e');
+      debugPrint('[OTP][UI] Error: $e');
+
+      if (!mounted) return;
+
       setState(() {
-        _error = e.toString().replaceAll('Exception: ', '');
+        _error = e.toString().replaceFirst('Exception: ', '');
       });
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() {
+          _busy = false;
+          debugPrint('[OTP][UI] Busy state reset');
+        });
+      }
+    }
+  }
+
+  Future<void> _handleResendOtp() async {
+    if (_resendBusy || _resendCountdown > 0) {
+      debugPrint('[OTP][UI] Resend already busy or in cooldown');
+      return;
+    }
+
+    final username = widget.username.trim();
+    debugPrint('[OTP][UI] Resend OTP for: $username');
+
+    setState(() {
+      _resendBusy = true;
+      _error = null;
+    });
+
+    try {
+      await _repo.resendOtp(username).timeout(
+            const Duration(seconds: 30),
+            onTimeout: () =>
+                throw Exception('Resend request timed out. Please try again.'),
+          );
+
+      if (!mounted) return;
+
+      _otp.clear();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('OTP resent successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      setState(() {
+        _resendCountdown = 30;
+      });
+
+      for (int i = 30; i > 0; i--) {
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          setState(() {
+            _resendCountdown = i - 1;
+          });
+        }
+      }
+
+      debugPrint('[OTP][UI] Resend cooldown completed');
+    } catch (e) {
+      debugPrint('[OTP][UI] Resend error: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _error = 'Failed to resend OTP: '
+            '${e.toString().replaceFirst('Exception: ', '')}';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _resendBusy = false;
+          debugPrint('[OTP][UI] Resend busy state reset');
+        });
       }
     }
   }
@@ -122,6 +207,15 @@ class _OtpScreenState extends State<OtpScreen> {
                   fontWeight: FontWeight.bold,
                   color: Colors.green[700],
                 ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Checking profile completion...',
+                style: TextStyle(color: Colors.green[600]),
+              ),
+              const SizedBox(height: 16),
+              const CircularProgressIndicator(
+                color: Colors.green,
               ),
             ],
           ),
@@ -148,179 +242,183 @@ class _OtpScreenState extends State<OtpScreen> {
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // OTP Icon
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: kBrandBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  child: Icon(Icons.lock_outline, size: 40, color: kBrandBlue),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: kBrandBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(40),
                 ),
-                const SizedBox(height: 24),
-
-                // Title
-                Text(
-                  'Enter OTP Code',
-                  style: t.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: kBrandBlue,
-                  ),
-                  textAlign: TextAlign.center,
+                child: Icon(Icons.lock_outline, size: 40, color: kBrandBlue),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Enter OTP Code',
+                style: t.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: kBrandBlue,
                 ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enter the 6-digit code sent to your registered contact',
+                style: t.textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              if (widget.contactMasked.isNotEmpty) ...[
                 const SizedBox(height: 8),
-
-                // Subtitle
                 Text(
-                  'Enter the 6-digit code sent to your registered contact',
-                  style:
-                      t.textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-
-                if (widget.contactMasked.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sent to: ${widget.contactMasked}',
-                    style: t.textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 32),
-
-                // OTP Input
-                TextField(
-                  controller: _otp,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    letterSpacing: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  decoration: InputDecoration(
-                    counterText: '',
-                    hintText: '000000',
-                    hintStyle: TextStyle(
-                      fontSize: 28,
-                      letterSpacing: 16,
-                      color: Colors.grey[300],
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: kBrandBlue, width: 2),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(
-                          color: kBrandBlue.withOpacity(0.3), width: 2),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: kBrandBlue, width: 2),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    if (value.length == 6) {
-                      _handleVerify();
-                    }
-                  },
-                ),
-
-                const SizedBox(height: 24),
-
-                // Error message
-                if (_error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red[300]!),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.red[700], size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _error!,
-                            style: TextStyle(color: Colors.red[700]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Verify Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: FilledButton(
-                    onPressed: _busy ? null : _handleVerify,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: kBrandBlue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _busy
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Verify & Continue',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Resend OTP
-                Center(
-                  child: TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () {
-                            // Implement resend OTP
-                            debugPrint(
-                                '[OTP] Resend OTP requested for: ${widget.username}');
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('OTP resent successfully')),
-                            );
-                          },
-                    child: Text(
-                      'Resend OTP',
-                      style: TextStyle(
-                          color: kBrandBlue, fontWeight: FontWeight.w600),
-                    ),
+                  'Sent to: ${widget.contactMasked}',
+                  style: t.textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
-            ),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _otp,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                enabled: !_busy,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 28,
+                  letterSpacing: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: '000000',
+                  hintStyle: TextStyle(
+                    fontSize: 28,
+                    letterSpacing: 16,
+                    color: Colors.grey[300],
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: kBrandBlue, width: 2),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                        color: kBrandBlue.withOpacity(0.3), width: 2),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: kBrandBlue, width: 2),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                        color:
+                            (Colors.grey[300] ?? Colors.grey).withOpacity(0.5),
+                        width: 2),
+                  ),
+                ),
+                onChanged: (value) {
+                  if (_error != null) {
+                    setState(() {
+                      _error = null;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline,
+                          color: Colors.red[700], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: FilledButton(
+                  onPressed: _busy ? null : _handleVerify,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: kBrandBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _busy
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Verify & Continue',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: OutlinedButton(
+                  onPressed: _resendBusy || _resendCountdown > 0
+                      ? null
+                      : _handleResendOtp,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: kBrandBlue, width: 2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _resendBusy
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(kBrandBlue),
+                          ),
+                        )
+                      : Text(
+                          _resendCountdown > 0
+                              ? 'Resend OTP in $_resendCountdown s'
+                              : 'Resend OTP',
+                          style: TextStyle(
+                            color: kBrandBlue,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
