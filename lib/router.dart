@@ -1,4 +1,4 @@
-// lib/router.dart (Updated)
+// lib/router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,7 +8,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/otp_screen.dart';
 import 'screens/auth/find_username_screen.dart';
 import 'screens/home/home_shell.dart';
-import 'screens/onboarding/tenant_registration_flow.dart';
+import 'screens/onboarding/registration_flow/tenant_registration_flow.dart';
 
 /// Main router configuration
 final router = GoRouter(
@@ -39,9 +39,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.onboardingTenant,
-      builder: (_, state) => TenantRegistrationFlow(
-        username: state.extra as String?,
-      ),
+      builder: (_, state) => const TenantRegistrationFlow(),
     ),
     GoRoute(
       path: AppRoutes.dashboard,

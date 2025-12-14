@@ -1,7 +1,5 @@
-// lib/screens/invoices/invoice_pay_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Changed from hooks_riverpod
 import '../../api/tenant_api.dart';
 import '../../providers/providers.dart';
 import 'package:go_router/go_router.dart';
@@ -28,9 +26,8 @@ class _InvoicePayScreenState extends ConsumerState<InvoicePayScreen> {
     setState(() => _busy = true);
     try {
       // Placeholder gateway — just show the URL we would open
-      final url = await ref
-          .read(apiProvider)
-          .initiateCheckout(widget.invoiceId);
+      final url =
+          await ref.read(apiProvider).initiateCheckout(widget.invoiceId);
       setState(() => _url = url);
     } finally {
       if (mounted) setState(() => _busy = false);

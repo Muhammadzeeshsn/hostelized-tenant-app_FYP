@@ -1,7 +1,7 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Changed from hooks_riverpod
 import 'router.dart';
 import 'theme.dart';
 
@@ -18,6 +18,7 @@ class App extends StatelessWidget {
       title: 'Hostelized Tenant',
       theme: hmsTheme(),
       routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
