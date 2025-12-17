@@ -1,3 +1,5 @@
+// lib/screens/onboarding/registration_flow/registration_model.dart
+
 class RegistrationModel {
   // Personal Info
   String firstName = '';

@@ -15,6 +15,9 @@ class TenantRegistrationFlow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentStep = ref.watch(currentStepProvider);
     final totalSteps = ref.read(totalStepsProvider);
+
+    // CRITICAL FIX: Watch the registration provider so validation recalculates on changes
+    ref.watch(registrationProvider);
     final isCurrentStepValid = RegistrationController.isCurrentStepValid(ref);
 
     // Create steps WITHOUT passing controller parameter
