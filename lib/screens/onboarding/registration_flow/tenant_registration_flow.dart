@@ -20,17 +20,14 @@ class TenantRegistrationFlow extends ConsumerWidget {
     ref.watch(registrationProvider);
     final isCurrentStepValid = RegistrationController.isCurrentStepValid(ref);
 
-    // Create steps WITHOUT passing controller parameter
+    // Create steps (6 steps total)
     final steps = [
-      const PersonalInfoStep(),
-      const ContactDetailsStep(),
-      const IdentityAddressStep(),
-      const JobDetailsStep(),
-      const StudyDetailsStep(),
-      const EmergencyContactsStep(),
-      const TermsAgreementStep(),
-      const ProfilePictureStep(),
-      const ReviewSubmissionStep(),
+      const PersonalInfoStep(), // Step 1
+      const AddressDetailsStep(), // Step 2
+      const PurposeOfStayStep(), // Step 3
+      const IdentityDocumentsStep(), // Step 4
+      const GuardianDetailsStep(), // Step 5
+      const PhotoVerificationStep(), // Step 6
     ];
 
     void skipRegistration() {

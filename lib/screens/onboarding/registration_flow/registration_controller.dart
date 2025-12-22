@@ -1,4 +1,5 @@
-import 'package:flutter/services.dart';
+// lib/screens/onboarding/registration_flow/registration_controller.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'registration_model.dart';
 
@@ -10,12 +11,15 @@ final registrationProvider = StateProvider<RegistrationModel>((ref) {
 // Provider for current step
 final currentStepProvider = StateProvider<int>((ref) => 0);
 
-// Provider for total steps
-final totalStepsProvider = Provider<int>((ref) => 9);
+// Provider for total steps (reduced to 6)
+final totalStepsProvider = Provider<int>((ref) => 6);
 
 // Helper class with static methods
 class RegistrationController {
-  // Navigation
+  // ============================================================================
+  // NAVIGATION
+  // ============================================================================
+
   static void nextStep(WidgetRef ref) {
     final current = ref.read(currentStepProvider);
     final total = ref.read(totalStepsProvider);
@@ -38,267 +42,326 @@ class RegistrationController {
     }
   }
 
-  // Data update methods
+  // ============================================================================
+  // DATA UPDATE METHODS
+  // ============================================================================
+
+  // Step 1: Personal Information
   static void updatePersonalInfo(
     WidgetRef ref, {
     String? firstName,
     String? lastName,
+    String? gender,
     String? email,
     String? phoneNumber,
     DateTime? dateOfBirth,
-    String? gender,
   }) {
     final currentState = ref.read(registrationProvider);
     ref.read(registrationProvider.notifier).state = currentState.copyWith(
-      firstName: firstName?.trim() ?? currentState.firstName,
-      lastName: lastName?.trim() ?? currentState.lastName,
-      email: email?.trim() ?? currentState.email,
-      phoneNumber: phoneNumber?.trim() ?? currentState.phoneNumber,
-      dateOfBirth: dateOfBirth ?? currentState.dateOfBirth,
-      gender: gender?.trim() ?? currentState.gender,
-    );
-
-    // Debug: Log the update
-    print(
-        '✅ UPDATED Personal Info: $firstName $lastName, $email, $phoneNumber');
-  }
-
-  static void updateContactDetails(
-    WidgetRef ref, {
-    String? personalEmail,
-    String? emergencyPhone,
-    String? alternatePhone,
-  }) {
-    final currentState = ref.read(registrationProvider);
-    ref.read(registrationProvider.notifier).state = currentState.copyWith(
-      personalEmail: personalEmail?.trim() ?? currentState.personalEmail,
-      emergencyPhone: emergencyPhone?.trim() ?? currentState.emergencyPhone,
-      alternatePhone: alternatePhone?.trim() ?? currentState.alternatePhone,
+      firstName: firstName?.trim(),
+      lastName: lastName?.trim(),
+      gender: gender?.trim(),
+      email: email?.trim(),
+      phoneNumber: phoneNumber?.trim(),
+      dateOfBirth: dateOfBirth,
     );
   }
 
+  // Step 2: Address Details
   static void updateAddress(
     WidgetRef ref, {
+    String? currentCountry,
+    String? currentCity,
     String? currentAddress,
+    String? permanentCountry,
+    String? permanentCity,
     String? permanentAddress,
-    String? city,
-    String? state,
-    String? country,
-    String? postalCode,
+    bool? sameAsCurrent,
   }) {
     final currentState = ref.read(registrationProvider);
-    ref.read(registrationProvider.notifier).state = currentState.copyWith(
-      currentAddress: currentAddress?.trim() ?? currentState.currentAddress,
-      permanentAddress:
-          permanentAddress?.trim() ?? currentState.permanentAddress,
-      city: city?.trim() ?? currentState.city,
-      state: state?.trim() ?? currentState.state,
-      country: country?.trim() ?? currentState.country,
-      postalCode: postalCode?.trim() ?? currentState.postalCode,
-    );
-  }
 
-  static void updateJobDetails(
-    WidgetRef ref, {
-    String? employmentStatus,
-    String? companyName,
-    String? jobTitle,
-    String? workEmail,
-    String? workPhone,
-    String? monthlyIncome,
-  }) {
-    final currentState = ref.read(registrationProvider);
-    ref.read(registrationProvider.notifier).state = currentState.copyWith(
-      employmentStatus:
-          employmentStatus?.trim() ?? currentState.employmentStatus,
-      companyName: companyName?.trim() ?? currentState.companyName,
-      jobTitle: jobTitle?.trim() ?? currentState.jobTitle,
-      workEmail: workEmail?.trim() ?? currentState.workEmail,
-      workPhone: workPhone?.trim() ?? currentState.workPhone,
-      monthlyIncome: monthlyIncome?.trim() ?? currentState.monthlyIncome,
-    );
-  }
-
-  static void updateStudyDetails(
-    WidgetRef ref, {
-    bool? isStudent,
-    String? institutionName,
-    String? courseName,
-    String? studentId,
-    String? yearOfStudy,
-  }) {
-    final currentState = ref.read(registrationProvider);
-    ref.read(registrationProvider.notifier).state = currentState.copyWith(
-      isStudent: isStudent ?? currentState.isStudent,
-      institutionName: institutionName?.trim() ?? currentState.institutionName,
-      courseName: courseName?.trim() ?? currentState.courseName,
-      studentId: studentId?.trim() ?? currentState.studentId,
-      yearOfStudy: yearOfStudy?.trim() ?? currentState.yearOfStudy,
-    );
-  }
-
-  static void addEmergencyContact(WidgetRef ref, Map<String, String> contact) {
-    final currentState = ref.read(registrationProvider);
-    final trimmedContact = {
-      'name': contact['name']?.trim() ?? '',
-      'phone': contact['phone']?.trim() ?? '',
-      'relationship': contact['relationship']?.trim() ?? '',
-    };
-    final newContacts = [...currentState.emergencyContacts, trimmedContact];
-    ref.read(registrationProvider.notifier).state =
-        currentState.copyWith(emergencyContacts: newContacts);
-  }
-
-  static void removeEmergencyContact(WidgetRef ref, int index) {
-    final currentState = ref.read(registrationProvider);
-    final newContacts =
-        List<Map<String, String>>.from(currentState.emergencyContacts);
-    if (index >= 0 && index < newContacts.length) {
-      newContacts.removeAt(index);
+    // If "same as current" is checked, copy current address to permanent
+    if (sameAsCurrent == true) {
+      ref.read(registrationProvider.notifier).state = currentState.copyWith(
+        currentCountry: currentCountry?.trim(),
+        currentCity: currentCity?.trim(),
+        currentAddress: currentAddress?.trim(),
+        permanentCountry: currentState.currentCountry,
+        permanentCity: currentState.currentCity,
+        permanentAddress: currentState.currentAddress,
+        sameAsCurrent: true,
+      );
+    } else {
+      ref.read(registrationProvider.notifier).state = currentState.copyWith(
+        currentCountry: currentCountry?.trim(),
+        currentCity: currentCity?.trim(),
+        currentAddress: currentAddress?.trim(),
+        permanentCountry: permanentCountry?.trim(),
+        permanentCity: permanentCity?.trim(),
+        permanentAddress: permanentAddress?.trim(),
+        sameAsCurrent: sameAsCurrent,
+      );
     }
-    ref.read(registrationProvider.notifier).state =
-        currentState.copyWith(emergencyContacts: newContacts);
   }
 
-  static void updateAgreements(
+  // Step 3: Purpose of Stay
+  static void updatePurposeOfStay(
     WidgetRef ref, {
-    bool? termsAccepted,
-    bool? privacyAccepted,
+    String? purposeOfStay,
+    String? institutionName,
+    String? courseDegree,
+    String? registrationNumber,
+    String? jobBusinessDetails,
+    String? businessStreetAddress,
+    String? designation,
+    String? otherPurposeDetails,
   }) {
     final currentState = ref.read(registrationProvider);
     ref.read(registrationProvider.notifier).state = currentState.copyWith(
-      termsAccepted: termsAccepted ?? currentState.termsAccepted,
-      privacyAccepted: privacyAccepted ?? currentState.privacyAccepted,
+      purposeOfStay: purposeOfStay?.trim(),
+      institutionName: institutionName?.trim(),
+      courseDegree: courseDegree?.trim(),
+      registrationNumber: registrationNumber?.trim(),
+      jobBusinessDetails: jobBusinessDetails?.trim(),
+      businessStreetAddress: businessStreetAddress?.trim(),
+      designation: designation?.trim(),
+      otherPurposeDetails: otherPurposeDetails?.trim(),
     );
   }
 
-  static void updateProfilePicture(WidgetRef ref, String? imagePath) {
+  // Step 4: Identity Documents
+  static void updateIdentityDocuments(
+    WidgetRef ref, {
+    String? documentType,
+    String? documentNumber,
+    String? documentImagePath,
+    String? documentBackImagePath,
+  }) {
     final currentState = ref.read(registrationProvider);
-    ref.read(registrationProvider.notifier).state =
-        currentState.copyWith(profileImagePath: imagePath?.trim());
+    ref.read(registrationProvider.notifier).state = currentState.copyWith(
+      documentType: documentType?.trim(),
+      documentNumber: documentNumber?.trim(),
+      documentImagePath: documentImagePath?.trim(),
+      documentBackImagePath: documentBackImagePath?.trim(),
+    );
   }
 
-  // Validation - Boolean check (SIMPLIFIED VERSION - FOR TESTING)
+  // Step 5: Guardian Details
+  static void updateGuardianDetails(
+    WidgetRef ref, {
+    String? guardianName,
+    String? guardianPhone,
+    String? guardianRelation,
+  }) {
+    final currentState = ref.read(registrationProvider);
+    ref.read(registrationProvider.notifier).state = currentState.copyWith(
+      guardianName: guardianName?.trim(),
+      guardianPhone: guardianPhone?.trim(),
+      guardianRelation: guardianRelation?.trim(),
+    );
+  }
+
+  // Step 6: Photo Verification
+  static void updatePhotoVerification(
+    WidgetRef ref, {
+    String? profileImagePath,
+    String? faceEncodingData,
+    bool? isFaceVerified,
+    bool? photoFromCamera,
+    bool? hostelPoliciesAccepted,
+    bool? termsConditionsAccepted,
+  }) {
+    final currentState = ref.read(registrationProvider);
+    ref.read(registrationProvider.notifier).state = currentState.copyWith(
+      profileImagePath: profileImagePath?.trim(),
+      faceEncodingData: faceEncodingData?.trim(),
+      isFaceVerified: isFaceVerified,
+      photoFromCamera: photoFromCamera,
+      hostelPoliciesAccepted: hostelPoliciesAccepted,
+      termsConditionsAccepted: termsConditionsAccepted,
+    );
+  }
+
+  // ============================================================================
+  // VALIDATION
+  // ============================================================================
+
   static bool isCurrentStepValid(WidgetRef ref) {
     final current = ref.read(currentStepProvider);
     final model = ref.read(registrationProvider);
 
-    // Debug: Force print the current state
-    print('🚨 VALIDATION CHECK - Step $current');
-    print(
-        'First Name: "${model.firstName}" (length: ${model.firstName.length})');
-    print('Last Name: "${model.lastName}" (length: ${model.lastName.length})');
-    print('Email: "${model.email}" (length: ${model.email.length})');
-    print(
-        'Phone: "${model.phoneNumber}" (length: ${model.phoneNumber.length})');
-
     switch (current) {
-      case 0:
-        // Step 0: Personal Information - SIMPLIFIED FOR NOW
-        // Just check if fields are not empty
-        final firstNameValid = model.firstName.trim().isNotEmpty;
-        final lastNameValid = model.lastName.trim().isNotEmpty;
-        final emailValid = model.email.trim().isNotEmpty;
-        final phoneValid = model.phoneNumber.trim().isNotEmpty;
+      case 0: // Personal Information
+        return model.firstName.trim().isNotEmpty &&
+            model.lastName.trim().isNotEmpty &&
+            model.gender.trim().isNotEmpty &&
+            model.email.trim().isNotEmpty &&
+            _isValidEmail(model.email) &&
+            model.phoneNumber.trim().isNotEmpty &&
+            model.dateOfBirth != null;
 
-        print('✅ Step 0 Validation Results:');
-        print('   First Name: $firstNameValid');
-        print('   Last Name: $lastNameValid');
-        print('   Email: $emailValid');
-        print('   Phone: $phoneValid');
-        print(
-            '   Overall: ${firstNameValid && lastNameValid && emailValid && phoneValid}');
+      case 1: // Address Details
+        if (model.sameAsCurrent) {
+          return model.currentCountry.trim().isNotEmpty &&
+              model.currentCity.trim().isNotEmpty &&
+              model.currentAddress.trim().isNotEmpty;
+        }
+        return model.currentCountry.trim().isNotEmpty &&
+            model.currentCity.trim().isNotEmpty &&
+            model.currentAddress.trim().isNotEmpty &&
+            model.permanentCountry.trim().isNotEmpty &&
+            model.permanentCity.trim().isNotEmpty &&
+            model.permanentAddress.trim().isNotEmpty;
 
-        return firstNameValid && lastNameValid && emailValid && phoneValid;
+      case 2: // Purpose of Stay
+        if (model.purposeOfStay.isEmpty) return false;
 
-      case 1:
-        // Step 1: Contact Details
-        return model.personalEmail.trim().isNotEmpty;
+        // Validate conditional fields based on purpose
+        switch (model.purposeOfStay.toLowerCase()) {
+          case 'student':
+            return model.institutionName.trim().isNotEmpty &&
+                model.courseDegree.trim().isNotEmpty;
+          case 'business':
+          case 'job':
+            return model.jobBusinessDetails.trim().isNotEmpty &&
+                model.businessStreetAddress.trim().isNotEmpty &&
+                model.designation.trim().isNotEmpty;
+          case 'other':
+            return model.otherPurposeDetails.trim().isNotEmpty;
+          default:
+            return true;
+        }
 
-      case 2:
-        // Step 2: Address
-        return model.currentAddress.trim().isNotEmpty &&
-            model.city.trim().isNotEmpty;
+      case 3: // Identity Documents
+        if (model.documentType.isEmpty || model.documentNumber.isEmpty) {
+          return false;
+        }
+        if (model.documentType.toLowerCase() == 'cnic') {
+          return model.documentImagePath != null &&
+              model.documentBackImagePath != null;
+        } else {
+          return model.documentImagePath != null;
+        }
 
-      case 3:
-        // Step 3: Job Details
-        return model.employmentStatus.trim().isNotEmpty;
+      case 4: // Guardian Details
+        return model.guardianName.trim().isNotEmpty &&
+            model.guardianPhone.trim().isNotEmpty &&
+            model.guardianRelation.trim().isNotEmpty;
 
-      case 4:
-        // Step 4: Study Details - Optional
-        return true;
-
-      case 5:
-        // Step 5: Emergency Contacts
-        return model.emergencyContacts.isNotEmpty;
-
-      case 6:
-        // Step 6: Terms Agreement
-        return model.termsAccepted && model.privacyAccepted;
-
-      case 7:
-        // Step 7: Profile Picture
+      case 5: // Photo Verification & Terms
         return model.profileImagePath != null &&
-            model.profileImagePath!.trim().isNotEmpty;
-
-      case 8:
-        // Step 8: Review - Always valid
-        return true;
+            model.isFaceVerified &&
+            model.hostelPoliciesAccepted &&
+            model.termsConditionsAccepted;
 
       default:
         return false;
     }
   }
 
-  // Validation - Get detailed error message (SIMPLIFIED)
   static String? getCurrentStepValidationMessage(WidgetRef ref) {
     final current = ref.read(currentStepProvider);
     final model = ref.read(registrationProvider);
 
     switch (current) {
-      case 0:
+      case 0: // Personal Information
         if (model.firstName.trim().isEmpty) return 'First name is required';
         if (model.lastName.trim().isEmpty) return 'Last name is required';
+        if (model.gender.trim().isEmpty) return 'Please select gender';
         if (model.email.trim().isEmpty) return 'Email is required';
+        if (!_isValidEmail(model.email)) return 'Invalid email format';
         if (model.phoneNumber.trim().isEmpty) return 'Phone number is required';
+        if (model.dateOfBirth == null) return 'Date of birth is required';
         return null;
 
-      case 1:
-        if (model.personalEmail.trim().isEmpty)
-          return 'Personal email is required';
-        return null;
-
-      case 2:
+      case 1: // Address Details
+        if (model.currentCountry.trim().isEmpty)
+          return 'Current country is required';
+        if (model.currentCity.trim().isEmpty) return 'Current city is required';
         if (model.currentAddress.trim().isEmpty)
           return 'Current address is required';
-        if (model.city.trim().isEmpty) return 'City is required';
-        return null;
-
-      case 3:
-        if (model.employmentStatus.trim().isEmpty)
-          return 'Please select your employment status';
-        return null;
-
-      case 5:
-        if (model.emergencyContacts.isEmpty)
-          return 'At least one emergency contact is required';
-        return null;
-
-      case 6:
-        if (!model.termsAccepted) return 'Please accept the Terms of Service';
-        if (!model.privacyAccepted) return 'Please accept the Privacy Policy';
-        return null;
-
-      case 7:
-        if (model.profileImagePath == null ||
-            model.profileImagePath!.trim().isEmpty) {
-          return 'Profile picture is required';
+        if (!model.sameAsCurrent) {
+          if (model.permanentCountry.trim().isEmpty)
+            return 'Permanent country is required';
+          if (model.permanentCity.trim().isEmpty)
+            return 'Permanent city is required';
+          if (model.permanentAddress.trim().isEmpty)
+            return 'Permanent address is required';
         }
+        return null;
+
+      case 2: // Purpose of Stay
+        if (model.purposeOfStay.isEmpty) return 'Please select purpose of stay';
+
+        switch (model.purposeOfStay.toLowerCase()) {
+          case 'student':
+            if (model.institutionName.trim().isEmpty)
+              return 'Institution name is required';
+            if (model.courseDegree.trim().isEmpty)
+              return 'Course/Degree is required';
+            break;
+          case 'business':
+          case 'job':
+            if (model.jobBusinessDetails.trim().isEmpty)
+              return 'Job/Business details are required';
+            if (model.businessStreetAddress.trim().isEmpty)
+              return 'Business address is required';
+            if (model.designation.trim().isEmpty)
+              return 'Designation is required';
+            break;
+          case 'other':
+            if (model.otherPurposeDetails.trim().isEmpty)
+              return 'Please specify purpose of stay';
+            break;
+        }
+        return null;
+
+      case 3: // Identity Documents
+        if (model.documentType.isEmpty) return 'Please select document type';
+        if (model.documentNumber.isEmpty) return 'Document number is required';
+        if (model.documentType.toLowerCase() == 'cnic') {
+          if (model.documentImagePath == null)
+            return 'Please upload CNIC front image';
+          if (model.documentBackImagePath == null)
+            return 'Please upload CNIC back image';
+        } else {
+          if (model.documentImagePath == null)
+            return 'Please upload passport image';
+        }
+        return null;
+
+      case 4: // Guardian Details
+        if (model.guardianName.trim().isEmpty)
+          return 'Guardian name is required';
+        if (model.guardianPhone.trim().isEmpty)
+          return 'Guardian phone is required';
+        if (model.guardianRelation.trim().isEmpty)
+          return 'Guardian relation is required';
+        return null;
+
+      case 5: // Photo Verification & Terms
+        if (model.profileImagePath == null)
+          return 'Please capture or upload your photo';
+        if (!model.isFaceVerified) return 'Face verification is required';
+        if (!model.hostelPoliciesAccepted)
+          return 'Please accept hostel policies';
+        if (!model.termsConditionsAccepted)
+          return 'Please accept terms & conditions';
         return null;
 
       default:
         return null;
     }
+  }
+
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
+
+  static bool _isValidEmail(String email) {
+    final emailRegex =
+        RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    return emailRegex.hasMatch(email.trim());
   }
 
   static void reset(WidgetRef ref) {
@@ -313,32 +376,12 @@ class RegistrationController {
     print('🎯 SUBMITTING REGISTRATION:');
     print('   Name: ${model.firstName} ${model.lastName}');
     print('   Email: ${model.email}');
-    print('   Phone: ${model.phoneNumber}');
+    print('   Purpose: ${model.purposeOfStay}');
+    print('   Document: ${model.documentType} - ${model.documentNumber}');
 
-    // TODO: Implement actual API call
+    // TODO: Implement actual API call with TenantApi
     await Future.delayed(const Duration(seconds: 2));
 
     print('✅ REGISTRATION SUBMITTED SUCCESSFULLY');
-    return;
-  }
-
-  // Debug method to print current state
-  static void debugPrintState(WidgetRef ref) {
-    final model = ref.read(registrationProvider);
-
-    print('🔍 DEBUG - CURRENT REGISTRATION STATE:');
-    print(
-        '   First Name: "${model.firstName}" (length: ${model.firstName.length})');
-    print(
-        '   Last Name: "${model.lastName}" (length: ${model.lastName.length})');
-    print('   Email: "${model.email}" (length: ${model.email.length})');
-    print(
-        '   Phone: "${model.phoneNumber}" (length: ${model.phoneNumber.length})');
-    print('   Gender: "${model.gender}"');
-    print('   Date of Birth: ${model.dateOfBirth}');
-    print('   Terms Accepted: ${model.termsAccepted}');
-    print('   Privacy Accepted: ${model.privacyAccepted}');
-    print('   Profile Image: ${model.profileImagePath}');
-    print('   Emergency Contacts: ${model.emergencyContacts.length}');
   }
 }

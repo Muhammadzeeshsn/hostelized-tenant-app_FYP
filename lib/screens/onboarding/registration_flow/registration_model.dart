@@ -1,115 +1,135 @@
 // lib/screens/onboarding/registration_flow/registration_model.dart
 
 class RegistrationModel {
-  // Personal Info
+  // Step 1: Personal Information
   String firstName = '';
   String lastName = '';
+  String gender = '';
   String email = '';
   String phoneNumber = '';
   DateTime? dateOfBirth;
-  String gender = '';
 
-  // Contact Details
-  String personalEmail = '';
-  String emergencyPhone = '';
-  String alternatePhone = '';
-
-  // Address
+  // Step 2: Address Details
+  String currentCountry = '';
+  String currentCity = '';
   String currentAddress = '';
+  String permanentCountry = '';
+  String permanentCity = '';
   String permanentAddress = '';
-  String city = '';
-  String state = '';
-  String country = '';
-  String postalCode = '';
+  bool sameAsCurrent = false;
 
-  // Job Details
-  String employmentStatus = '';
-  String companyName = '';
-  String jobTitle = '';
-  String workEmail = '';
-  String workPhone = '';
-  String monthlyIncome = '';
+  // Step 3: Purpose of Stay
+  String purposeOfStay = ''; // student, business, tourist, other
 
-  // Study Details - Updated to match actual fields
-  bool isStudent = false;
+  // Conditional fields for Student
   String institutionName = '';
-  String courseName = '';
-  String studentId = '';
-  String yearOfStudy = '';
+  String courseDegree = '';
+  String registrationNumber = '';
 
-  // Emergency Contacts
-  List<Map<String, String>> emergencyContacts = [];
+  // Conditional fields for Business/Job
+  String jobBusinessDetails = '';
+  String businessStreetAddress = '';
+  String designation = '';
 
-  // Agreements
-  bool termsAccepted = false;
-  bool privacyAccepted = false;
+  // Conditional field for Other
+  String otherPurposeDetails = '';
 
-  // Profile Picture
+  // Step 4: Identity Documents
+  String documentType = ''; // cnic, passport
+  String documentNumber = '';
+  String? documentImagePath; // Front/single image
+  String? documentBackImagePath; // Back image for CNIC
+
+  // Step 5: Guardian Details
+  String guardianName = '';
+  String guardianPhone = '';
+  String guardianRelation = '';
+
+  // Step 6: Photo Verification
   String? profileImagePath;
+  String? faceEncodingData; // Store facial encoding as JSON string
+  bool isFaceVerified = false;
+  bool photoFromCamera = false; // Track if photo was taken from camera
 
-  // CopyWith method for Riverpod
+  // Terms acceptance
+  bool hostelPoliciesAccepted = false;
+  bool termsConditionsAccepted = false;
+
+  // CopyWith method for Riverpod state updates
   RegistrationModel copyWith({
     String? firstName,
     String? lastName,
+    String? gender,
     String? email,
     String? phoneNumber,
     DateTime? dateOfBirth,
-    String? gender,
-    String? personalEmail,
-    String? emergencyPhone,
-    String? alternatePhone,
+    String? currentCountry,
+    String? currentCity,
     String? currentAddress,
+    String? permanentCountry,
+    String? permanentCity,
     String? permanentAddress,
-    String? city,
-    String? state,
-    String? country,
-    String? postalCode,
-    String? employmentStatus,
-    String? companyName,
-    String? jobTitle,
-    String? workEmail,
-    String? workPhone,
-    String? monthlyIncome,
-    bool? isStudent,
+    bool? sameAsCurrent,
+    String? purposeOfStay,
     String? institutionName,
-    String? courseName,
-    String? studentId,
-    String? yearOfStudy,
-    List<Map<String, String>>? emergencyContacts,
-    bool? termsAccepted,
-    bool? privacyAccepted,
+    String? courseDegree,
+    String? registrationNumber,
+    String? jobBusinessDetails,
+    String? businessStreetAddress,
+    String? designation,
+    String? otherPurposeDetails,
+    String? documentType,
+    String? documentNumber,
+    String? documentImagePath,
+    String? documentBackImagePath,
+    String? guardianName,
+    String? guardianPhone,
+    String? guardianRelation,
     String? profileImagePath,
+    String? faceEncodingData,
+    bool? isFaceVerified,
+    bool? photoFromCamera,
+    bool? hostelPoliciesAccepted,
+    bool? termsConditionsAccepted,
   }) {
     return RegistrationModel()
       ..firstName = firstName ?? this.firstName
       ..lastName = lastName ?? this.lastName
+      ..gender = gender ?? this.gender
       ..email = email ?? this.email
       ..phoneNumber = phoneNumber ?? this.phoneNumber
       ..dateOfBirth = dateOfBirth ?? this.dateOfBirth
-      ..gender = gender ?? this.gender
-      ..personalEmail = personalEmail ?? this.personalEmail
-      ..emergencyPhone = emergencyPhone ?? this.emergencyPhone
-      ..alternatePhone = alternatePhone ?? this.alternatePhone
+      ..currentCountry = currentCountry ?? this.currentCountry
+      ..currentCity = currentCity ?? this.currentCity
       ..currentAddress = currentAddress ?? this.currentAddress
+      ..permanentCountry = permanentCountry ?? this.permanentCountry
+      ..permanentCity = permanentCity ?? this.permanentCity
       ..permanentAddress = permanentAddress ?? this.permanentAddress
-      ..city = city ?? this.city
-      ..state = state ?? this.state
-      ..country = country ?? this.country
-      ..postalCode = postalCode ?? this.postalCode
-      ..employmentStatus = employmentStatus ?? this.employmentStatus
-      ..companyName = companyName ?? this.companyName
-      ..jobTitle = jobTitle ?? this.jobTitle
-      ..workEmail = workEmail ?? this.workEmail
-      ..workPhone = workPhone ?? this.workPhone
-      ..monthlyIncome = monthlyIncome ?? this.monthlyIncome
-      ..isStudent = isStudent ?? this.isStudent
+      ..sameAsCurrent = sameAsCurrent ?? this.sameAsCurrent
+      ..purposeOfStay = purposeOfStay ?? this.purposeOfStay
       ..institutionName = institutionName ?? this.institutionName
-      ..courseName = courseName ?? this.courseName
-      ..studentId = studentId ?? this.studentId
-      ..yearOfStudy = yearOfStudy ?? this.yearOfStudy
-      ..emergencyContacts = emergencyContacts ?? this.emergencyContacts
-      ..termsAccepted = termsAccepted ?? this.termsAccepted
-      ..privacyAccepted = privacyAccepted ?? this.privacyAccepted
-      ..profileImagePath = profileImagePath ?? this.profileImagePath;
+      ..courseDegree = courseDegree ?? this.courseDegree
+      ..registrationNumber = registrationNumber ?? this.registrationNumber
+      ..jobBusinessDetails = jobBusinessDetails ?? this.jobBusinessDetails
+      ..businessStreetAddress =
+          businessStreetAddress ?? this.businessStreetAddress
+      ..designation = designation ?? this.designation
+      ..otherPurposeDetails = otherPurposeDetails ?? this.otherPurposeDetails
+      ..documentType = documentType ?? this.documentType
+      ..documentNumber = documentNumber ?? this.documentNumber
+      ..documentImagePath = documentImagePath ?? this.documentImagePath
+      ..documentBackImagePath =
+          documentBackImagePath ?? this.documentBackImagePath
+      ..guardianName = guardianName ?? this.guardianName
+      ..guardianPhone = guardianPhone ?? this.guardianPhone
+      ..guardianRelation = guardianRelation ?? this.guardianRelation
+      ..profileImagePath = profileImagePath ?? this.profileImagePath
+      ..faceEncodingData = faceEncodingData ?? this.faceEncodingData
+      ..isFaceVerified = isFaceVerified ?? this.isFaceVerified
+      ..photoFromCamera = photoFromCamera ?? this.photoFromCamera
+      ..hostelPoliciesAccepted =
+          hostelPoliciesAccepted ?? this.hostelPoliciesAccepted
+      ..termsConditionsAccepted =
+          termsConditionsAccepted ?? this.termsConditionsAccepted;
   }
 }

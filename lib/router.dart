@@ -9,6 +9,7 @@ import 'screens/auth/otp_screen.dart';
 import 'screens/auth/find_username_screen.dart';
 import 'screens/home/home_shell.dart';
 import 'screens/onboarding/registration_flow/tenant_registration_flow.dart';
+import 'screens/services/services_screen.dart';
 
 /// Main router configuration
 final router = GoRouter(
@@ -44,6 +45,17 @@ final router = GoRouter(
     GoRoute(
       path: AppRoutes.dashboard,
       builder: (_, __) => const HomeShell(),
+    ),
+
+    GoRoute(
+      path: '/service-success',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return ServiceSuccessScreen(
+          service: extra?['service'] ?? 'Unknown',
+          details: extra?['details'] ?? 'No details',
+        );
+      },
     ),
 
     // NOTE: Legacy registration routes have been removed

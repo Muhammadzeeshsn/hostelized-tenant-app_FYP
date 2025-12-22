@@ -1,8 +1,12 @@
-import 'package:flutter/material.dart';
+// lib/screens/home/home_screen.dart
 
-/// Brand colors
-const _brandBlue = Color(0xFF003A60); // #003A60
-const _cardBlue = Color(0xFF0A3A5A);
+import 'package:flutter/material.dart';
+import '../../models/home.dart';
+import '../../services/mock_data_service.dart';
+
+/// Brand colors matching the design
+const _brandBlue = Color(0xFF003A60);
+const _cardBlue = Color(0xFF004A70);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,144 +16,504 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // ---------- Mock data (replace with API later) ----------
-  final _hostelName = 'Punjab Hostel';
+  bool _isLoading = true;
+  TenantHome? _homeData;
+  String? _errorMessage;
 
-  final _user = const {
-    'firstName': 'Ali',
-    'personalId': 'A-879-12',
-    'program': 'B.Tech',
-    'roll': 'FAXX-XXX-XXX',
-    // leave empty to show placeholder avatar
-    'avatar': '',
-  };
+  @override
+  void initState() {
+    super.initState();
+    _loadHomeData();
+  }
 
-  final List<Map<String, num>> _dues = const [
-    {'amount': 4000, 'discount': 0}, // Mess Fee
-    {'amount': 3000, 'discount': 0}, // Hostel Fee
-    {'amount': 7000, 'discount': 0}, // Laundry Fee
-    {'amount': 5000, 'discount': 1000}, // Service Charge
-  ];
+  Future<void> _loadHomeData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-  final List<_Notice> _notices = [
-    _Notice(
-      dotColor: Colors.red,
-      text:
-          'Last Date to pay Hostel Fees is 20/9/2023 for the month of September.',
-    ),
-    _Notice(
-      text:
-          'Your service request was completed yesterday. Head to the ticket section to provide your feedback!',
-    ),
-    _Notice(
-      text: 'Your mess has been turned off from 29/08/2023 to 5/09/2023.',
-    ),
-    _Notice(
-      text:
-          'Your Service request for house keeping on 30/08/2023 could not be completed. Kindly reschedule.',
-    ),
-  ];
-  // --------------------------------------------------------
+    try {
+      final data = await MockDataService.getHomeData();
+      setState(() {
+        _homeData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load data: $e';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    final total = _dues.fold<num>(0, (t, e) => t + (e['amount'] ?? 0));
-    final discount = _dues.fold<num>(0, (t, e) => t + (e['discount'] ?? 0));
-    final payable = total - discount;
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(_errorMessage!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadHomeData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final tenant = _homeData!.tenant;
+    final hostel = _homeData!.hostel;
+    final balance = _homeData!.balance;
+    final notices = _homeData!.notices;
+
+    final firstName = tenant?['firstName'] ?? 'Guest';
+    final personalId = tenant?['personalId'] ?? 'N/A';
+    final program = tenant?['program'] ?? 'N/A';
+    final rollNumber = tenant?['rollNumber'] ?? 'N/A';
+    final avatarUrl = tenant?['avatarUrl'] ?? '';
+    final hostelName = hostel?['name'] ?? 'Hostel';
+
+    final breakdown = (balance['breakdown'] as List?) ?? [];
+    final totalAmount = balance['totalDues'] ?? 0;
+    final totalDiscount = balance['totalDiscount'] ?? 0;
+    final dueDate = balance['dueDate'] ?? 'N/A';
+
+    // Format due date
+    final formattedDueDate = _formatDate(dueDate);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leadingWidth: 64,
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 16),
-          child: _HmsBubble(),
-        ),
-        title: Text(
-          _hostelName,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: _brandBlue,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: _showNotifications,
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: _brandBlue,
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          children: [
-            _HeaderRow(
-              name: _user['firstName'] as String,
-              avatarUrl: _user['avatar'] as String?,
-              onAvatarTap: () {}, // later: go to profile
-            ),
-            const SizedBox(height: 16),
+        child: RefreshIndicator(
+          onRefresh: _loadHomeData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
 
-            _MetaRow(
-              icon: Icons.account_balance_rounded,
-              label: 'Personal ID',
-              value: _user['personalId'] as String,
-            ),
-            const SizedBox(height: 10),
-            _MetaRow(
-              icon: Icons.school_rounded,
-              label: 'Study Program',
-              value: _user['program'] as String,
-            ),
-            const SizedBox(height: 10),
-            _MetaRow(
-              icon: Icons.featured_play_list_rounded,
-              label: 'Roll Number',
-              value: _user['roll'] as String,
-            ),
+                  // Header Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // HMS Logo
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: const BoxDecoration(
+                          color: _brandBlue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'HMS',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
 
-            const SizedBox(height: 20),
+                      // Hostel Name
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            hostelName,
+                            style: const TextStyle(
+                              color: _brandBlue,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
 
-            _DuesCard(
-              total: total,
-              discount: discount,
-              payable: payable,
-              onPayNow: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Pay Now tapped (placeholder)')),
-                );
-              },
+                      // Notification Bell
+                      Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: _brandBlue,
+                              size: 28,
+                            ),
+                            onPressed: () => _showNotifications(notices),
+                          ),
+                          if (notices.any((n) => n['read'] == false))
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Greeting and Avatar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Hi, $firstName',
+                        style: const TextStyle(
+                          color: _brandBlue,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      CircleAvatar(
+                        radius: 35,
+                        backgroundColor: _brandBlue.withOpacity(0.1),
+                        backgroundImage: avatarUrl.isNotEmpty
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: avatarUrl.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                color: _brandBlue,
+                                size: 35,
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Personal Info Rows
+                  _InfoRow(
+                    icon: Icons.badge_outlined,
+                    label: 'Personal ID',
+                    value: personalId,
+                  ),
+                  const SizedBox(height: 12),
+                  _InfoRow(
+                    icon: Icons.school_outlined,
+                    label: 'Study Program',
+                    value: program,
+                  ),
+                  const SizedBox(height: 12),
+                  _InfoRow(
+                    icon: Icons.format_list_numbered,
+                    label: 'Roll Number',
+                    value: rollNumber,
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Dues Card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _cardBlue,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Dues',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Table Header
+                        Row(
+                          children: [
+                            const Expanded(
+                              flex: 5,
+                              child: Text(
+                                '',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                'Amount',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                'Discount',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const Divider(color: Colors.white30, height: 24),
+
+                        // Dues Breakdown
+                        ...breakdown.map((item) {
+                          final name = item['name'] ?? '';
+                          final amount = item['amount'] ?? 0;
+                          final discount = item['discount'] ?? 0;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    'Rs $amount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    'Rs $discount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+
+                        const Divider(color: Colors.white30, height: 24),
+
+                        // Total
+                        Row(
+                          children: [
+                            const Expanded(
+                              flex: 5,
+                              child: Text(
+                                'Total Amount',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                'Rs $totalAmount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                'Rs $totalDiscount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Due Date and Pay Button
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Due Date',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  formattedDueDate,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Payment feature coming soon'),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2CB0A5),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'Pay Now',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Hostel Card Button
+                  InkWell(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Hostel Card feature coming soon'),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _brandBlue.withOpacity(0.3),
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: _brandBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.badge_outlined,
+                              color: _brandBlue,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Text(
+                              'Hostel Card',
+                              style: TextStyle(
+                                color: _brandBlue,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            color: _brandBlue.withOpacity(0.6),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 100), // Space for bottom nav
+                ],
+              ),
             ),
-
-            const SizedBox(height: 20),
-
-            _HostelCardButton(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Hostel Card tapped')),
-                );
-              },
-            ),
-
-            const SizedBox(height: 80),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // Notifications dialog
-  void _showNotifications() {
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  void _showNotifications(List<dynamic> notices) {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -159,38 +523,47 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 560),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                Text(
+                const Text(
                   'Notifications',
-                  style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                  style: TextStyle(
                     color: Colors.white,
+                    fontSize: 24,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
-                  child: ListView.separated(
-                    itemCount: _notices.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) {
-                      final n = _notices[i];
-                      return _NoticeTile(
-                        notice: n,
-                        onMarkRead: () {
-                          setState(() => n.read = true);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
+                  child: notices.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No notifications',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: notices.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, i) {
+                            final notice = notices[i];
+                            return _NoticeTile(
+                              notice: notice,
+                              onMarkRead: () {
+                                Navigator.pop(context);
+                                _loadHomeData();
+                              },
+                            );
+                          },
+                        ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: 220,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: _brandBlue,
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -199,10 +572,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     onPressed: () {
-                      setState(() {
-                        for (final n in _notices) n.read = true;
-                      });
                       Navigator.pop(ctx);
+                      _loadHomeData();
                     },
                     child: const Text(
                       'Clear Notifications',
@@ -219,80 +590,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// HMS round bubble logo
-class _HmsBubble extends StatelessWidget {
-  const _HmsBubble();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: _brandBlue,
-        shape: BoxShape.circle,
-      ),
-      child: const Text(
-        'HMS',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-          letterSpacing: .5,
-        ),
-      ),
-    );
-  }
-}
-
-/// Greeting + avatar
-class _HeaderRow extends StatelessWidget {
-  final String name;
-  final String? avatarUrl;
-  final VoidCallback? onAvatarTap;
-
-  const _HeaderRow({required this.name, this.avatarUrl, this.onAvatarTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Text(
-            'Hi, $name',
-            style: text.headlineSmall?.copyWith(
-              color: _brandBlue,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        GestureDetector(
-          onTap: onAvatarTap,
-          child: CircleAvatar(
-            radius: 28,
-            backgroundColor: _brandBlue.withOpacity(.15),
-            backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
-                ? NetworkImage(avatarUrl!)
-                : null,
-            child: (avatarUrl == null || avatarUrl!.isEmpty)
-                ? const Icon(Icons.person, color: _brandBlue, size: 28)
-                : null,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Meta info row (icon + label + value)
-class _MetaRow extends StatelessWidget {
+class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
 
-  const _MetaRow({
+  const _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
@@ -300,20 +603,24 @@ class _MetaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final grey = Colors.black.withOpacity(.65);
     return Row(
       children: [
-        Icon(icon, color: _brandBlue, size: 22),
+        Icon(icon, color: _brandBlue, size: 24),
         const SizedBox(width: 12),
         Text(
           label,
-          style: TextStyle(color: grey, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Colors.black.withOpacity(0.6),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const Spacer(),
         Text(
           value,
           style: const TextStyle(
             color: Colors.black87,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -322,232 +629,41 @@ class _MetaRow extends StatelessWidget {
   }
 }
 
-/// Dues card (dark blue block)
-class _DuesCard extends StatelessWidget {
-  final num total;
-  final num discount;
-  final num payable;
-  final VoidCallback onPayNow;
-
-  const _DuesCard({
-    required this.total,
-    required this.discount,
-    required this.payable,
-    required this.onPayNow,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-
-    Widget row(String label, String l, String r, {bool bold = false}) {
-      final style = text.bodyMedium?.copyWith(
-        color: Colors.white,
-        fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-      );
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Expanded(flex: 6, child: Text(label, style: style)),
-            Expanded(flex: 4, child: Text(l, style: style)),
-            Expanded(flex: 4, child: Text(r, style: style)),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: _cardBlue,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Dues',
-            style: text.titleLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                flex: 6,
-                child: Text(
-                  '',
-                  style: text.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-              ),
-              Expanded(
-                flex: 4,
-                child: Text(
-                  'Amount',
-                  style: text.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-              ),
-              Expanded(
-                flex: 4,
-                child: Text(
-                  'Discount',
-                  style: text.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-              ),
-            ],
-          ),
-          const Divider(color: Colors.white30, height: 18),
-          row('Mess Fee', 'Rs 4000', 'Rs 0'),
-          row('Hostel Fee', 'Rs 3000', 'Rs 0'),
-          row('Laundry Fee', 'Rs 7000', 'Rs 0'),
-          row('Service Charge', 'Rs 5000', 'Rs 1000'),
-          const Divider(color: Colors.white30, height: 18),
-          row(
-            'Total Amount',
-            'Rs ${total.toStringAsFixed(0)}',
-            'Rs ${discount.toStringAsFixed(0)}',
-            bold: true,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                'Due Date',
-                style: text.bodySmall?.copyWith(color: Colors.white70),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '31/12/2022',
-                style: text.bodySmall?.copyWith(color: Colors.white),
-              ),
-              const Spacer(),
-              SizedBox(
-                height: 36,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF2CB0A5),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: onPayNow,
-                  child: const Text(
-                    'Pay Now',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Hostel card CTA
-class _HostelCardButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _HostelCardButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _brandBlue.withOpacity(.25), width: 2),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _brandBlue.withOpacity(.08),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(Icons.badge_outlined, color: _brandBlue),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Hostel Card',
-                  style: TextStyle(
-                    color: _brandBlue,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: _brandBlue.withOpacity(.8),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Notification model
-class _Notice {
-  final String text;
-  final Color dotColor;
-  bool read;
-
-  _Notice({
-    required this.text,
-    this.dotColor = Colors.white,
-    this.read = false,
-  });
-}
-
-/// Notification tile inside dialog
 class _NoticeTile extends StatelessWidget {
-  final _Notice notice;
+  final Map<String, dynamic> notice;
   final VoidCallback onMarkRead;
 
   const _NoticeTile({required this.notice, required this.onMarkRead});
 
   @override
   Widget build(BuildContext context) {
+    final message = notice['message'] ?? '';
+    final priority = notice['priority'] ?? 'normal';
+    final isRead = notice['read'] == true;
+    final dotColor = priority == 'high' ? Colors.red : Colors.white;
+
     return Container(
       decoration: BoxDecoration(
-        color: _brandBlue.withOpacity(.15),
+        color: _brandBlue.withOpacity(0.15),
         borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.all(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // dot
           Container(
             margin: const EdgeInsets.only(top: 6),
             width: 12,
             height: 12,
             decoration: BoxDecoration(
-              color: notice.read ? Colors.white38 : notice.dotColor,
+              color: isRead ? Colors.white38 : dotColor,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              notice.text,
+              message,
               style: const TextStyle(color: Colors.white, height: 1.25),
             ),
           ),
