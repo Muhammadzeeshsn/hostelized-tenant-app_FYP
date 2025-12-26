@@ -21,7 +21,7 @@ android {
     defaultConfig {
         applicationId = "com.example.hostelized_tenant_app"
         // >>> required by flutter_secure_storage & others
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

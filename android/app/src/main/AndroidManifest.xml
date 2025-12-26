@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
 
     <application
-        android:label="hostelized_tenant_app"
+        android:label="Hostelized Tenant"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         
@@ -42,3 +42,6 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+    </queries>
+    
+</manifest>

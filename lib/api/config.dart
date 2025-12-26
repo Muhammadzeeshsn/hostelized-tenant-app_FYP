@@ -1,7 +1,9 @@
 // lib/api/config.dart
 class AppConfig {
   // For iOS Simulator
-  static const String baseUrl = 'http://127.0.0.1:4000';
+  // static const String baseUrl = 'http://127.0.0.1:4000';
+  static const String baseUrl =
+      'https://overcomplex-vicky-contractually.ngrok-free.dev';
 
   // For Android Emulator
   // static const String baseUrl = 'http://10.0.2.2:4000';

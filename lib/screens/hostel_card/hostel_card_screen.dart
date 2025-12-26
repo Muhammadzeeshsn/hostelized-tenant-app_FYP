@@ -2,10 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../services/mock_data_service.dart';
-
-const _brandBlue = Color(0xFF003A60);
+import 'package:barcode_widget/barcode_widget.dart';
+import '../../theme.dart';
 
 class HostelCardScreen extends ConsumerStatefulWidget {
   const HostelCardScreen({super.key});
@@ -16,86 +14,100 @@ class HostelCardScreen extends ConsumerStatefulWidget {
 
 class _HostelCardScreenState extends ConsumerState<HostelCardScreen> {
   bool _isLoading = true;
-  Map<String, dynamic>? _profileData;
+
+  // Mock user data - replace with actual data from your API
+  final Map<String, String> _cardData = {
+    'name': 'Ali',
+    'hostelName': 'Comsats University, Islamabad',
+    'hostelId': 'PH-123',
+    'allottedHostel': 'Punjab Hostel',
+    'roomNo': 'A1',
+    'contactNo': '1234XXXXXX',
+    'course': 'BSSE',
+    'rollNo': 'FAXX-XXX-XXXX',
+    'dob': '25/XX/XXXX',
+    'photoUrl': '', // Add actual photo URL from backend
+  };
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadCardData();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadCardData() async {
     setState(() => _isLoading = true);
-    try {
-      final data = await MockDataService.getProfile();
-      setState(() {
-        _profileData = data;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
+    // Simulate API call
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() => _isLoading = false);
+  }
+
+  void _printCard() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Preparing card for printing...'),
+        backgroundColor: kBrandBlue,
+      ),
+    );
+    // Implement actual print functionality
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Loading Hostel Card...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
-
-    final firstName = _profileData?['firstName'] ?? '';
-    final hostelId = _profileData?['personalId'] ?? '';
-    final hostelName = 'Punjab Hostel'; // From hostel data
-    final roomNo = 'A1'; // From room data
-    final phone = _profileData?['phone'] ?? '';
-    final course = _profileData?['program'] ?? '';
-    final rollNo = _profileData?['rollNumber'] ?? '';
-    final dob = _profileData?['dateOfBirth'] ?? '';
-    final avatarUrl = _profileData?['avatarUrl'] ?? '';
-    final institution = 'Comsats University, Islamabad';
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        title: const Text('Hostel Card'),
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Title
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Text(
-                'Hostel Card',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
-            ),
+            const SizedBox(height: 20),
 
             // Card Container
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
+              margin: const EdgeInsets.symmetric(horizontal: 24),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
-                  // Institution Name
+                  // Hostel Name
                   Text(
-                    institution,
+                    _cardData['hostelName'] ?? '',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -103,74 +115,75 @@ class _HostelCardScreenState extends ConsumerState<HostelCardScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+
                   const SizedBox(height: 24),
 
-                  // Avatar
+                  // Profile Photo
                   Container(
-                    width: 120,
-                    height: 120,
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: _brandBlue, width: 4),
+                      border: Border.all(
+                        color: kBrandBlue,
+                        width: 4,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kBrandBlue.withOpacity(0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: ClipOval(
-                      child: avatarUrl.isNotEmpty
-                          ? Image.network(avatarUrl, fit: BoxFit.cover)
-                          : Container(
-                              color: _brandBlue.withOpacity(0.1),
-                              child: const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: _brandBlue,
-                              ),
-                            ),
+                      child: _cardData['photoUrl']?.isNotEmpty == true
+                          ? Image.network(
+                              _cardData['photoUrl']!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildPlaceholderPhoto();
+                              },
+                            )
+                          : _buildPlaceholderPhoto(),
                     ),
                   ),
+
                   const SizedBox(height: 16),
 
                   // Name
                   Text(
-                    firstName,
+                    _cardData['name'] ?? '',
                     style: const TextStyle(
                       fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 24),
 
-                  // Details
-                  _DetailRow('Hostel Id', hostelId),
-                  _DetailRow('Allotted Hostel', hostelName),
-                  _DetailRow('Room No.', roomNo),
-                  _DetailRow('Contact No.', phone),
-                  _DetailRow('Course', course),
-                  _DetailRow('Roll No.', rollNo),
-                  _DetailRow('D.O.B', _formatDate(dob)),
+                  const SizedBox(height: 32),
 
-                  const SizedBox(height: 24),
+                  // Card Details
+                  _buildDetailRow('Hostel Id', _cardData['hostelId'] ?? ''),
+                  _buildDetailRow(
+                      'Allotted Hostel', _cardData['allottedHostel'] ?? ''),
+                  _buildDetailRow('Room No.', _cardData['roomNo'] ?? ''),
+                  _buildDetailRow('Contact No.', _cardData['contactNo'] ?? ''),
+                  _buildDetailRow('Course', _cardData['course'] ?? ''),
+                  _buildDetailRow('Roll No.', _cardData['rollNo'] ?? ''),
+                  _buildDetailRow('D.O.B', _cardData['dob'] ?? ''),
+
+                  const SizedBox(height: 32),
 
                   // Barcode
                   Container(
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Image.asset(
-                      'assets/barcode.png', // Placeholder
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Text(
-                            '||||||||||||||||||||',
-                            style: TextStyle(
-                              fontSize: 24,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        );
-                      },
+                    height: 80,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: BarcodeWidget(
+                      barcode: Barcode.code128(),
+                      data: _cardData['hostelId'] ?? 'PH-123',
+                      drawText: false,
+                      color: Colors.black,
                     ),
                   ),
                 ],
@@ -181,19 +194,13 @@ class _HostelCardScreenState extends ConsumerState<HostelCardScreen> {
 
             // Print Button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Print functionality coming soon'),
-                      ),
-                    );
-                  },
+                  onPressed: _printCard,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5A7A8C),
+                    backgroundColor: kBrandBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -204,81 +211,244 @@ class _HostelCardScreenState extends ConsumerState<HostelCardScreen> {
                   child: const Text(
                     'Print',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // Continue to Dashboard
             TextButton(
-              onPressed: () => context.go('/dashboard'),
+              onPressed: () => Navigator.pop(context),
               child: const Text(
                 'Continue to Dashboard',
                 style: TextStyle(
-                  fontSize: 16,
-                  color: _brandBlue,
-                  decoration: TextDecoration.underline,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: kBrandBlue,
                 ),
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
 
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateStr;
-    }
+  Widget _buildPlaceholderPhoto() {
+    return Container(
+      color: Colors.grey[300],
+      child: Center(
+        child: Icon(
+          Icons.person,
+          size: 80,
+          color: Colors.grey[600],
+        ),
+      ),
+    );
   }
-}
 
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DetailRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
           Expanded(
-            flex: 5,
+            flex: 2,
             child: Text(
               label,
               style: const TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),
             ),
           ),
           Expanded(
-            flex: 6,
-            child: Text(
-              ': $value',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
+            flex: 3,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey[400]!,
+                    width: 1,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+              ),
+              child: Text(
+                ': $value',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Hostel Card Feature Coming Soon Overlay
+class HostelCardComingSoonOverlay extends StatelessWidget {
+  const HostelCardComingSoonOverlay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: kBrandBlue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.credit_card,
+                  size: 48,
+                  color: kBrandBlue,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Hostel Card',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Feature coming soon',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kBrandBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Got it',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Payment Feature Coming Soon Overlay
+class PaymentComingSoonOverlay extends StatelessWidget {
+  const PaymentComingSoonOverlay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: kBrandBlue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.payment,
+                  size: 48,
+                  color: kBrandBlue,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Payment',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Feature coming soon',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kBrandBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Got it',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

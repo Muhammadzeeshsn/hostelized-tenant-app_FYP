@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import '../../models/home.dart';
 import '../../services/mock_data_service.dart';
+import '../wallet/wallet_screen.dart';
+import '../hostel_card/hostel_card_screen.dart';
 
 /// Brand colors matching the design
 const _brandBlue = Color(0xFF003A60);
@@ -44,6 +46,24 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _navigateToWallet() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WalletScreen(),
+      ),
+    );
+  }
+
+  void _showHostelCardOverlay() {
+    // Show hostel card in overlay dialog
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => const HostelCardOverlayDialog(),
+    );
   }
 
   @override
@@ -404,14 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                             ElevatedButton(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Payment feature coming soon'),
-                                  ),
-                                );
-                              },
+                              onPressed: _navigateToWallet,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2CB0A5),
                                 foregroundColor: Colors.white,
@@ -442,13 +455,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Hostel Card Button
                   InkWell(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Hostel Card feature coming soon'),
-                        ),
-                      );
-                    },
+                    onTap: _showHostelCardOverlay,
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       padding: const EdgeInsets.all(16),
@@ -672,6 +679,233 @@ class _NoticeTile extends StatelessWidget {
             style: TextButton.styleFrom(foregroundColor: Colors.white),
             onPressed: onMarkRead,
             child: const Text('Mark read'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Hostel Card Overlay Dialog
+class HostelCardOverlayDialog extends StatelessWidget {
+  const HostelCardOverlayDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Mock user data - replace with actual data
+    final cardData = {
+      'name': 'Ali',
+      'hostelName': 'Comsats University, Islamabad',
+      'hostelId': 'PH-123',
+      'allottedHostel': 'Punjab Hostel',
+      'roomNo': 'A1',
+      'contactNo': '1234XXXXXX',
+      'course': 'BSSE',
+      'rollNo': 'FAXX-XXX-XXXX',
+      'dob': '25/XX/XXXX',
+      'photoUrl': '',
+    };
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Close button
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+                color: Colors.grey[600],
+              ),
+            ),
+
+            // Scrollable content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Column(
+                  children: [
+                    // Hostel Name
+                    Text(
+                      cardData['hostelName'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Profile Photo
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _brandBlue,
+                          width: 3,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: cardData['photoUrl']?.isNotEmpty == true
+                            ? Image.network(
+                                cardData['photoUrl']!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildPlaceholderPhoto();
+                                },
+                              )
+                            : _buildPlaceholderPhoto(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Name
+                    Text(
+                      cardData['name'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Card Details
+                    _buildDetailRow('Hostel Id', cardData['hostelId'] ?? ''),
+                    _buildDetailRow(
+                        'Allotted Hostel', cardData['allottedHostel'] ?? ''),
+                    _buildDetailRow('Room No.', cardData['roomNo'] ?? ''),
+                    _buildDetailRow('Contact No.', cardData['contactNo'] ?? ''),
+                    _buildDetailRow('Course', cardData['course'] ?? ''),
+                    _buildDetailRow('Roll No.', cardData['rollNo'] ?? ''),
+                    _buildDetailRow('D.O.B', cardData['dob'] ?? ''),
+
+                    const SizedBox(height: 24),
+
+                    // Barcode placeholder
+                    Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '||||| |||| ||||| ||||',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[600],
+                            letterSpacing: 4,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Print Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Preparing card for printing...'),
+                              backgroundColor: _brandBlue,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _brandBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Print',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderPhoto() {
+    return Container(
+      color: Colors.grey[300],
+      child: Center(
+        child: Icon(
+          Icons.person,
+          size: 60,
+          color: Colors.grey[600],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey[400]!,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Text(
+                ': $value',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
           ),
         ],
       ),

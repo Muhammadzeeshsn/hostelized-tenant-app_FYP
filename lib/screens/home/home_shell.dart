@@ -1,6 +1,8 @@
 // lib/screens/home/home_shell.dart
 
 import 'package:flutter/material.dart';
+import 'package:hostelized_tenant_app/screens/tickets/tickets_screen.dart';
+import 'package:hostelized_tenant_app/screens/wallet/wallet_screen.dart';
 import 'tabs/home_tab.dart';
 import '../invoices/invoices_screen.dart';
 import '../services/services_screen.dart';
@@ -23,11 +25,13 @@ class _HomeShellState extends State<HomeShell>
   late Animation<double> _animation;
 
   final List<Widget> _screens = const [
-    InvoicesScreen(),
+    // InvoicesScreen(),
+    TicketsScreen(),
     ServicesScreen(),
     HomeTab(),
     MessScreen(),
-    AccountDetailsScreen(),
+    WalletScreen(),
+    // AccountDetailsScreen(),
   ];
 
   @override

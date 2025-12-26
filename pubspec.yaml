@@ -23,6 +23,8 @@ dependencies:
   path: ^1.8.3
   country_code_picker: ^2.0.2
   google_mlkit_face_detection: ^0.10.0  # For face detection
+  barcode_widget: ^2.0.4
+
 
 dev_dependencies:
   flutter_test:
